@@ -61,7 +61,56 @@ namespace InventoryKamera
                 ProgramStatus_Label,
                 ErrorLog_TextBox,
                 Navigation_Image);
+
+            AddZeroMeansAllHints();
         }
+
+        #region "0 = all" hints
+
+        // 0 means "all" for both of these settings, but that was only in a hover tooltip.
+        // Say it in the labels, and show what the current number will do next to each box.
+        private System.Windows.Forms.Label charactersHint, artifactPagesHint;
+
+        private void AddZeroMeansAllHints()
+        {
+            label5.Text = "Characters to scan (0 = all)";
+            SortByObtained.Text = "Artifact pages to scan (0 = all)";
+            ZeroMeansAllTooltips.SetToolTip(label5, "0 scans every character. Another number scans that many, starting from the first in your list.");
+            ZeroMeansAllTooltips.SetToolTip(SortByObtained, "0 scans every artifact. Another number scans that many pages of your newest artifacts.");
+
+            charactersHint = AddHint(NumOfCharToScanControl);
+            artifactPagesHint = AddHint(SortByObtainedControl);
+
+            NumOfCharToScanControl.ValueChanged += (s, e) => UpdateZeroMeansAllHints();
+            SortByObtainedControl.ValueChanged += (s, e) => UpdateZeroMeansAllHints();
+            UpdateZeroMeansAllHints();
+        }
+
+        private System.Windows.Forms.Label AddHint(Control numberBox)
+        {
+            var hint = new System.Windows.Forms.Label
+            {
+                AutoSize = true,
+                ForeColor = SystemColors.GrayText,
+                Location = new Point(numberBox.Right + 4, numberBox.Top + 3),
+            };
+            Controls.Add(hint);
+            hint.BringToFront();
+            return hint;
+        }
+
+        private void UpdateZeroMeansAllHints()
+        {
+            int characters = (int)NumOfCharToScanControl.Value;
+            charactersHint.Text = ZeroMeansAllHint(characters, "all characters", characters == 1 ? "first character" : $"first {characters} characters");
+
+            int pages = (int)SortByObtainedControl.Value;
+            artifactPagesHint.Text = ZeroMeansAllHint(pages, "all artifacts", pages == 1 ? "newest page" : $"newest {pages} pages");
+        }
+
+        internal static string ZeroMeansAllHint(int value, string all, string some) => "= " + (value == 0 ? all : some);
+
+        #endregion "0 = all" hints
 
         private double ScannerDelayValue(int value)
         {
