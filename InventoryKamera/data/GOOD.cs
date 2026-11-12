@@ -86,7 +86,11 @@ namespace InventoryKamera
 
             // Assign materials
             if (genshinData.Inventory.AllMaterials.Count > 0) Materials = new Dictionary<string, int>();
-            genshinData.Inventory.AllMaterials.ToList().ForEach(material => Materials.Add(material.name, material.count));
+            // A count of 0 means the quantity couldn't be read (owned items are never 0 in the inventory).
+            // Leave it out rather than tell importers the item is gone. The scan log still reports it.
+            // (Adapted from dmitry-shishkin/Inventory_Kamera 1.4.11, MIT.)
+            genshinData.Inventory.AllMaterials.Where(material => material.count > 0).ToList()
+                .ForEach(material => Materials.Add(material.name, material.count));
         }
 
         internal void WriteToJSON(string outputDirectory)

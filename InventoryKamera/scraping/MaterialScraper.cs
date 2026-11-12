@@ -312,85 +312,130 @@ namespace InventoryKamera
 			return null;
 		}
 
+		// Quantity reading adapted from dmitry-shishkin/Inventory_Kamera 1.4.11 (MIT): find the pale
+		// quantity strip, keep only dark-blue digit ink (drops gold rarity stars), reject digits clipped
+		// at the bottom edge, OCR at several sizes and require a clear majority. 0 means "unknown".
 		public static int ScanMaterialCount(Rectangle rectangle, out Bitmap quantity)
 		{
-			Dictionary<int, int> counts = new Dictionary<int, int>();
-			var region = new RECT(
-				Left: rectangle.X,
-				Top: (int)(rectangle.Y + (0.8 * rectangle.Height)), // Only get the bottom of inventory item
-				Right: rectangle.Right,
-				Bottom: rectangle.Bottom + 10);
-
-            var rRange = new Accord.IntRange(0, 150);
-            var bRange = new Accord.IntRange(0, 150);
-            var gRange = new Accord.IntRange(0, 150);
-
+            var region = GetMaterialQuantityRegion(rectangle);
             using (Bitmap bm = Navigation.CaptureRegion(region))
-			{
-				quantity = (Bitmap)bm.Clone();
+            {
+                quantity = (Bitmap)bm.Clone();
+                return ParseMaterialCount(bm);
+            }
+        }
 
-				for (var scale = 1.0; scale <= 3; scale += 0.5)
+        public static RECT GetMaterialQuantityRegion(Rectangle rectangle)
+        {
+            double referenceHeight = Navigation.GetAspectRatio() == new Size(8, 5) ? 800.0 : 720.0;
+            return new RECT(
+                Left: rectangle.X,
+                Top: (int)(rectangle.Y + (0.8 * rectangle.Height)),
+                Right: rectangle.Right,
+                Bottom: rectangle.Bottom + (int)Math.Round(20 * Navigation.GetHeight() / referenceHeight));
+        }
+
+        public static int ParseMaterialCount(Bitmap bm, Func<Bitmap, string> analyzeText = null)
+        {
+            if (analyzeText == null)
+                analyzeText = image =>
                 {
-					using (Bitmap rescaled = GenshinProcesor.ResizeImage(bm, (int)(bm.Width * scale), (int)(bm.Height * scale)))
+                    string text = GenshinProcesor.AnalyzeText(image, Tesseract.PageSegMode.SingleLine, true);
+                    return string.IsNullOrWhiteSpace(text)
+                        ? GenshinProcesor.AnalyzeText(image, Tesseract.PageSegMode.SingleWord, true)
+                        : text;
+                };
+            var counts = new Dictionary<int, int>();
+
+            // Locate the pale quantity strip, independently of capture height and display scale.
+            int top = 0;
+            int bottom = bm.Height;
+            for (int y = 0; y < bm.Height; y++)
+            {
+                int light = 0;
+                for (int x = 0; x < bm.Width; x++)
+                {
+                    Color color = bm.GetPixel(x, y);
+                    if (color.R > 180 && color.G > 180 && color.B > 160) light++;
+                }
+                if (light >= bm.Width * 0.85)
+                {
+                    top = y;
+                    // The blank side margins locate the lower edge even on dense digit rows.
+                    int margin = Math.Max(1, bm.Width / 8);
+                    for (int row = top + 1; row < bm.Height; row++)
                     {
-                        Bitmap copy = (Bitmap)rescaled.Clone();
-                        GenshinProcesor.FilterColors(ref copy, rRange, bRange, gRange);
-
-                        for (int i = 0; i < copy.Width; i++)
-                            for (int j = 0; j < copy.Height * 0.25; j++)
-                                copy.SetPixel(i, j, Color.White);
-
-                        Bitmap n = GenshinProcesor.ConvertToGrayscale(copy);
-                        
-						GenshinProcesor.SetInvert(ref n);
-                        n = new Threshold(50).Apply(n);
-
-                        string original = GenshinProcesor.AnalyzeText(n).Trim();
-
-						n.Dispose();
-						copy.Dispose();
-
-                        if (int.TryParse(original, out int val)) return val;
-
-                        // Might be worth it to train some more numbers
-                        var cleaned = original;
-
-                        cleaned = cleaned.Replace("M", "111");
-
-                        cleaned = Regex.Replace(cleaned, @"[^0-9]", string.Empty);
-
-                        int.TryParse(cleaned, out val);
-
-                        Logger.Debug($"Scanned: {original} -> Regex: {cleaned} -> Parsed: {val}");
-
-                        if (counts.TryGetValue(val, out var counter))
+                        int paleMargins = 0;
+                        for (int x = 0; x < margin; x++)
                         {
-                            if (counter >= 3 && val != 0) return val;
-                            counts[val]++;
+                            Color left = bm.GetPixel(x, row);
+                            Color right = bm.GetPixel(bm.Width - 1 - x, row);
+                            if (left.R > 180 && left.G > 180 && left.B > 160) paleMargins++;
+                            if (right.R > 180 && right.G > 180 && right.B > 160) paleMargins++;
                         }
-                        else
+                        // Require a strict pale majority: a half-pale transition row can contain dark frame fragments.
+                        if (paleMargins <= margin)
                         {
-                            counts.Add(val, 1);
+                            bottom = row;
+                            break;
                         }
                     }
+                    break;
                 }
-			}
-			
-			var nullableMode = SafeExtractMaxCounter(counts);
-			if (nullableMode == null)
-				return 0;
+            }
 
-			var mode = nullableMode.Value;
-			if (mode.Key == 0 && counts.Count >= 5) 
-				return 0;
-			
-			counts.Remove(mode.Key);
-			return SafeExtractMaxCounter(counts)?.Value ?? 0;
-		}
+            using (var digits = new Bitmap(bm.Width, bottom - top))
+            {
+                // Keep dark blue number ink (and neutral black), excluding gold rarity stars.
+                for (int y = top; y < bottom; y++)
+                    for (int x = 0; x < bm.Width; x++)
+                    {
+                        Color color = bm.GetPixel(x, y);
+                        bool ink = color.R < 160 && color.B >= color.R && color.G >= color.R;
+                        digits.SetPixel(x, y - top, ink ? color : Color.White);
+                    }
 
-		private static KeyValuePair<int, int>? SafeExtractMaxCounter(Dictionary<int, int> counts)
-		{
-            return counts.Count == 0 ? null : (KeyValuePair<int, int>?)counts.Aggregate((l, r) => l.Value > r.Value ? l : r);
+                // A central ink stroke at the bottom may be a clipped glyph, even if OCR agrees.
+                // Runs attached to an image edge belong to the selected tile's frame.
+                int runStart = -1;
+                for (int x = 0; x < digits.Width; x++)
+                {
+                    if (digits.GetPixel(x, digits.Height - 1).R < 160)
+                    {
+                        if (runStart < 0) runStart = x;
+                    }
+                    else
+                    {
+                        if (runStart > 0) return 0;
+                        runStart = -1;
+                    }
+                }
+
+                for (double scale = 2; scale <= 4; scale += 0.5)
+                {
+                    using (var resized = GenshinProcesor.ResizeImage(digits,
+                        (int)(digits.Width * scale), (int)(digits.Height * scale)))
+                    using (var padded = new Bitmap(resized.Width + 30, resized.Height + 30))
+                    {
+                        using (var graphics = Graphics.FromImage(padded))
+                        {
+                            graphics.Clear(Color.White);
+                            graphics.DrawImageUnscaled(resized, 15, 15);
+                        }
+                        string original = analyzeText(padded).Trim();
+                        string cleaned = Regex.Replace(original, @"[^0-9]", string.Empty);
+                        int.TryParse(cleaned, out int value);
+                        Logger.Debug($"Scanned: {original} -> Regex: {cleaned} -> Parsed: {value}");
+                        if (value > 0)
+                            counts[value] = counts.TryGetValue(value, out int votes) ? votes + 1 : 1;
+                    }
+                }
+            }
+
+            var winners = counts.OrderByDescending(entry => entry.Value).ToList();
+            if (winners.Count == 0 || winners[0].Value < 2
+                || (winners.Count > 1 && winners[0].Value == winners[1].Value)) return 0;
+            return winners[0].Key;
         }
     }
 }

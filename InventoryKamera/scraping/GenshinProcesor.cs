@@ -195,20 +195,30 @@ namespace InventoryKamera
 			TesseractEngine e;
 			while (!engines.TryTake(out e)) { Thread.Sleep(10); }
 
-			if (numbersOnly) e.SetVariable("tessedit_char_whitelist", "0123456789");
-			using (var page = e.Process(bitmap, pageMode))
+			// Engines are pooled and reused. Always set the whitelist (empty = all characters) so a
+			// numbers-only read can't leak into the next caller, and always return the engine, even
+			// on error, so the pool can't run dry and freeze the scan.
+			// (Adapted from dmitry-shishkin/Inventory_Kamera 1.4.11, MIT.)
+			try
 			{
-				using (var iter = page.GetIterator())
+				e.SetVariable("tessedit_char_whitelist", numbersOnly ? "0123456789" : "");
+				using (var page = e.Process(bitmap, pageMode))
 				{
-					iter.Begin();
-					do
+					using (var iter = page.GetIterator())
 					{
-						text += iter.GetText(PageIteratorLevel.TextLine);
+						iter.Begin();
+						do
+						{
+							text += iter.GetText(PageIteratorLevel.TextLine);
+						}
+						while (iter.Next(PageIteratorLevel.TextLine));
 					}
-					while (iter.Next(PageIteratorLevel.TextLine));
 				}
 			}
-			engines.Add(e);
+			finally
+			{
+				engines.Add(e);
+			}
 
 			return text;
 		}
