@@ -475,17 +475,17 @@ namespace InventoryKamera
 
         private void Github_Label_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start("https://github.com/taiwenlee/Inventory_Kamera/");
+            Process.Start(ForkRepository.Url);
         }
 
         private void Releases_Label_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start("https://github.com/taiwenlee/Inventory_Kamera/releases");
+            Process.Start(ForkRepository.ReleasesUrl);
         }
 
         private void IssuesPage_Label_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start("https://github.com/taiwenlee/Inventory_Kamera/issues");
+            Process.Start(ForkRepository.IssuesUrl);
         }
 
         private void FileSelectButton_Click(object sender, EventArgs e)
@@ -679,16 +679,13 @@ namespace InventoryKamera
             var client = new GitHubClient(new ProductHeaderValue("Inventory_Kamera"));
             try
             {
-                var releases = await client.Repository.Release.GetAll("Andrewthe13th", "Inventory_Kamera");
-                var latest = releases.First();
-
-
-                Version latestVersion = new Version(Regex.Replace(latest.TagName, "[a-zA-Z]", string.Empty));
+                // Latest published, non-prerelease release of this fork.
+                var latest = await client.Repository.Release.GetLatest(ForkRepository.Owner, ForkRepository.Name);
                 Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
-                if (currentVersion.CompareTo(latestVersion) < 0)
+                if (ForkRepository.IsNewerRelease(latest.TagName, currentVersion))
                 {
                     var message = $"A new version of Inventory Kamera is available.\n\n" +
-                        $"Current Version: {currentVersion}\nLatest Version: {latestVersion}\n\n" +
+                        $"Current Version: {currentVersion.ToString(3)}\nLatest Version: {latest.TagName}\n\n" +
                         $"Would you like to download the update?";
                     var result = MessageBox.Show(message, "Inventory Kamera Update", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                     if (result == DialogResult.Yes)
@@ -698,7 +695,10 @@ namespace InventoryKamera
                 }
             }
             catch (RateLimitExceededException) { Logger.Warn("Rate limit exceeded checking for Kamera Update!!!! This warning should be resolved in an hour."); }
-            
+            catch (NotFoundException) { Logger.Info("No published release of {0}/{1} yet; skipping the update check.", ForkRepository.Owner, ForkRepository.Name); }
+            // Offline, GitHub down, etc.: an update check must never stop the app from starting.
+            catch (Exception ex) { Logger.Warn(ex, "Could not check for Kamera updates."); }
+
         }
 
         private void CheckForGenshinUpdates()
