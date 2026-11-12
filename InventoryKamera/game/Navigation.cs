@@ -255,9 +255,32 @@ namespace InventoryKamera
 			var words = Regex.Matches(text, "[a-z]+").Cast<Match>().Select(m => m.Value).ToList();
 
 			bool Names(string tabName) => words.Any(word =>
-				GenshinProcesor.LevenshteinDistance(word, tabName) <= (tabName.Length >= 9 ? 2 : 1));
+				EditDistance(word, tabName) <= (tabName.Length >= 9 ? 2 : 1));
 
 			return Names(TabNames[page]) && TabNames.Where(t => t.Key != page).All(t => !Names(t.Value));
+		}
+
+		/// <summary>
+		/// Number of single-letter insertions, deletions or substitutions between two words.
+		/// Kept here, not borrowed from GenshinProcesor, because using that class first loads the
+		/// lookup tables, which this check doesn't need.
+		/// </summary>
+		internal static int EditDistance(string a, string b)
+		{
+			var previous = new int[b.Length + 1];
+			var current = new int[b.Length + 1];
+			for (int j = 0; j <= b.Length; j++) previous[j] = j;
+			for (int i = 1; i <= a.Length; i++)
+			{
+				current[0] = i;
+				for (int j = 1; j <= b.Length; j++)
+				{
+					int substitute = previous[j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1);
+					current[j] = Math.Min(substitute, Math.Min(previous[j] + 1, current[j - 1] + 1));
+				}
+				var swap = previous; previous = current; current = swap;
+			}
+			return previous[b.Length];
 		}
 
 		/// <summary>Where the tab name sits, on the same 1280x720 scale as the tab buttons. It can wrap to two lines.</summary>

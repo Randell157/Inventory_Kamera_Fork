@@ -49,6 +49,18 @@ namespace InventoryKamera.Tests
                 Assert.IsFalse(Navigation.HeaderShowsTab(header, tab), $"\"{header}\" must not count as {tab}");
         }
 
+        [DataTestMethod]
+        [DataRow("materials", "materials", 0)]
+        [DataRow("matenals", "materials", 2)]
+        [DataRow("weapon", "weapons", 1)]
+        [DataRow("", "abc", 3)]
+        [DataRow("kitten", "sitting", 3)]
+        public void EditDistanceCountsLetterChanges(string a, string b, int expected)
+        {
+            Assert.AreEqual(expected, Navigation.EditDistance(a, b));
+            Assert.AreEqual(expected, Navigation.EditDistance(b, a));
+        }
+
         // ---- Click, check, retry ------------------------------------------------------------
 
         [TestMethod]

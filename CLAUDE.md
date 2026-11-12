@@ -14,7 +14,9 @@ dotnet test InventoryKamera.Tests\InventoryKamera.Tests.csproj -c Release -p:Pla
 - App output: `InventoryKamera\bin\x64\Release\`, the same file set as the 1.4.5 release plus `System.Resources.Extensions.dll`. Run the exe from that folder, because logs and lookup tables are relative to the working directory. Copy `inventorylists\` from the 1.4.5 install into it to skip the first-launch download.
 - The exe asks for Administrator rights (UAC) on launch, so the agent can't run it. The user launches it.
 - The dev build shares `%LOCALAPPDATA%\InventoryKamera\settings.json` with the user's 1.4.5 install.
-- Tests (`InventoryKamera.Tests`, MSTest) are offline only. They never launch Genshin or send input.
+- Tests (`InventoryKamera.Tests`, MSTest) are offline only. They never launch Genshin or send input. Run them in **both** Debug and Release: test order differs, and a test that touches `GenshinProcesor` without the `MaterialQuantityTests` isolation sandbox breaks its static initializer for the whole run.
+- Some tests use the user's private screenshots, logs and exports from the folder in `IK_TEST_IMAGES` (the vault's `Inventory Kamera Fork\Test images`). Without it they are skipped. Never copy those files into the repo.
+- If the user has the app open, the Release exe is locked and the build fails with MSB3027. Build Debug instead, or ask them to close it.
 - `.resx` images are embedded with `GenerateResourceUsePreserializedResources`, which needs `System.Resources.Extensions` at runtime. `SmokeTests.EmbeddedResourcesLoad` guards this.
 
 ## Where things are
