@@ -5,10 +5,10 @@ Fan-made Genshin Impact tool that scans characters, weapons, artifacts, material
 This scanner exports in `.GOOD`, a JSON-based exporting format, which allows you to use it with compatible online Genshin Impact tools. These tools include artifact optimizing tools including [Genshin Optimizer](https://frzyc.github.io/genshin-optimizer/#/), [SEELIE.me](https://seelie.me/) and [Aspirine's Genshin Impact Calculator](https://genshin.aspirine.su/).
 
 ## Download
-[LATEST DOWNLOAD HERE](https://github.com/taiwenlee/Inventory_Kamera/releases/latest) <- CLICK ME NOT THE "CODE" BUTTON NEAR THE TOP OF THIS PAGE
+[LATEST DOWNLOAD HERE](https://github.com/Randell157/Inventory_Kamera_Fork/releases/latest) <- CLICK ME NOT THE "CODE" BUTTON NEAR THE TOP OF THIS PAGE
 
 ## DISCORD
-https://discord.gg/zh56aVWe3U
+The Discord server of the original Inventory Kamera project (not run by this fork): https://discord.gg/zh56aVWe3U
 
 
 
@@ -28,6 +28,7 @@ https://discord.gg/zh56aVWe3U
   - [Requesting a new feature](#requesting-a-new-feature)
   - [Asking a question](#asking-a-question)
   - [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
+  - [Credits](#credits)
   - [License](#license)
 
 ## Installing Inventory Kamera
@@ -37,7 +38,7 @@ Before installing Inventory Kamera, please have **the following things installed
 - [GenshinImpact.exe](https://genshin.hoyoverse.com/) or [YuanShen.exe](https://ys.mihoyo.com/) launcher
 - [Microsoft Visual C++ Redistributable for Visual Studio 2015-2022 (x86 or x64)](https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-studio-2015-2017-2019-and-2022), _**A computer restart may be required after installing this package for the first time**_
 
-[Download the latest version of Inventory Kamera here](https://github.com/Andrewthe13th/Inventory_Kamera/releases/latest) and unzip its files into a folder of your choosing, then launch the extracted .exe file. It will likely prompt you for Security and/or User Access. This access is required to interact with the game.
+[Download the latest version of Inventory Kamera here](https://github.com/Randell157/Inventory_Kamera_Fork/releases/latest) and unzip its files into a folder of your choosing, then launch the extracted .exe file. It will likely prompt you for Security and/or User Access. This access is required to interact with the game.
 
 To upgrade from a previous version, download a newer release and unzip its files into the current Inventory Kamera location (allow it to replace old files when prompted) or a new folder of your choosing.
 
@@ -52,7 +53,7 @@ To upgrade from a previous version, download a newer release and unzip its files
      - Don't know if a resolution is 16:9 or 16:10? [Find out here](https://andrew.hedges.name/experiments/aspect_ratio/).
         > **Warning**
         >
-        > If you have an ultrawide screen, please see [this thread](https://github.com/Andrewthe13th/Inventory_Kamera/issues/40)
+        > If you have an ultrawide screen, please see [this thread in the original project](https://github.com/Andrewthe13th/Inventory_Kamera/issues/40)
         > Additionally, HDR is not currently supported. If you experience scanning issues, please make sure this is disabled in Windows Settings
    - Under `Controls`, set _Control Type_ to Keyboard.
      - If you rebound keys (inventory (default: B), character screen (default: C), or selecting character 1 (default: 1)) revert your binding to default or set up the new key binding in Inventory Kamera.
@@ -205,7 +206,7 @@ Consider using [a JSON text validator](https://jsonlint.com/) after following th
 
 ### Creating a new issue
 
-We would **love to have Screenshots (especially video recordings!) and Error Logs as evidence**. These can be very helpful for debugging your problem. Add it to the issue via drag-and-drop or by attaching the file to the template. Inventory Kamera may place screenshots in the `logging` folder (divided into categories) when it thinks it encountered an issue. Attaching a zipped copy of your `logging` folder is the best way to submit logs. You may check the 'Log All Screenshots' box to force this behavior in most areas that may concern the devs.
+Open issues for this fork at [github.com/Randell157/Inventory_Kamera_Fork/issues](https://github.com/Randell157/Inventory_Kamera_Fork/issues). We would **love to have Screenshots (especially video recordings!) and Error Logs as evidence**. These can be very helpful for debugging your problem. Add it to the issue via drag-and-drop or by attaching the file to the template. Inventory Kamera may place screenshots in the `logging` folder (divided into categories) when it thinks it encountered an issue. Attaching a zipped copy of your `logging` folder is the best way to submit logs. You may check the 'Log All Screenshots' box to force this behavior in most areas that may concern the devs.
 
 ## Frequently Asked Questions (FAQ)
 
@@ -221,6 +222,13 @@ However, that does not mean it will stay that way forever! We are at the mercy o
 #### What Languages does Inventory Kamera support?
 
 Inventory Kamera only supports _**English**_ currently. This limitation is due to only having a trained dataset available for the English language. The in-game "Game Langugae" option must be set to Engish. Scanning efficiency is not guaranteed for other languages. More languages may be implemented in the future but there are no current plans.
+
+## Credits
+
+This is a maintained fork. The source code lives at [Randell157/Inventory_Kamera_Fork](https://github.com/Randell157/Inventory_Kamera_Fork).
+
+- [Andrewthe13th/Inventory_Kamera](https://github.com/Andrewthe13th/Inventory_Kamera): the original Inventory Kamera.
+- [taiwenlee/Inventory_Kamera](https://github.com/taiwenlee/Inventory_Kamera): the fork this one is based on (version 1.4.5).
 
 ## License
 
