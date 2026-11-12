@@ -4,6 +4,8 @@ Fan-made Genshin Impact tool that scans characters, weapons, artifacts, material
 
 This scanner exports in `.GOOD`, a JSON-based exporting format, which allows you to use it with compatible online Genshin Impact tools. These tools include artifact optimizing tools including [Genshin Optimizer](https://frzyc.github.io/genshin-optimizer/#/), [SEELIE.me](https://seelie.me/) and [Aspirine's Genshin Impact Calculator](https://genshin.aspirine.su/).
 
+> **AI disclosure:** this fork's changes were written with [Claude Code](https://claude.com/claude-code) using Claude Opus 5.5. See [AI-assisted development](#ai-assisted-development).
+
 ## Download
 [LATEST DOWNLOAD HERE](https://github.com/Randell157/Inventory_Kamera_Fork/releases/latest) <- CLICK ME NOT THE "CODE" BUTTON NEAR THE TOP OF THIS PAGE
 
@@ -28,6 +30,7 @@ The Discord server of the original Inventory Kamera project (not run by this for
   - [Requesting a new feature](#requesting-a-new-feature)
   - [Asking a question](#asking-a-question)
   - [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
+  - [AI-assisted development](#ai-assisted-development)
   - [Credits](#credits)
   - [License](#license)
 
@@ -222,6 +225,12 @@ However, that does not mean it will stay that way forever! We are at the mercy o
 #### What Languages does Inventory Kamera support?
 
 Inventory Kamera only supports _**English**_ currently. This limitation is due to only having a trained dataset available for the English language. The in-game "Game Langugae" option must be set to Engish. Scanning efficiency is not guaranteed for other languages. More languages may be implemented in the future but there are no current plans.
+
+## AI-assisted development
+
+The changes in this fork, from version 1.5.0 on, were made with [Claude Code](https://claude.com/claude-code), Anthropic's AI coding tool, using the Claude Opus 5.5 model. Claude Code wrote the code, tests and documentation changes. The maintainer directed the work, reviewed it, and checked each fix with real in-game scans before it was committed. Commits written this way carry a `Co-Authored-By: Claude` line.
+
+The code inherited from Andrewthe13th, taiwenlee and dmitry-shishkin (see [Credits](#credits)) is their own work and is not covered by this note.
 
 ## Credits
 
