@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 using WindowsInput;
@@ -179,6 +182,125 @@ namespace InventoryKamera
 			Click();
 			SystemWait(Speed.UI);
 		}
+
+		#region Inventory tab check
+
+		// A tab click can be lost while the inventory is still opening, which left the game on
+		// its last-used tab and made the scanner scan the wrong items. Each tab shows its name at
+		// the top left ("Weapons", "Artifacts", "Character Development Items", "Materials"), so
+		// after clicking, read that name and retry until it is the expected tab.
+
+		private const int TabAttempts = 5;
+
+		// One distinctive word per tab name, matched against each word OCR reads from the header.
+		private static readonly Dictionary<InventoryPage, string> TabNames = new Dictionary<InventoryPage, string>
+		{
+			{ InventoryPage.Weapons, "weapons" },
+			{ InventoryPage.Artifacts, "artifacts" },
+			{ InventoryPage.CharacterDevelopmentItems, "development" },
+			{ InventoryPage.Materials, "materials" },
+		};
+
+		/// <summary>
+		/// Opens the inventory on the given tab and confirms the tab by its name.
+		/// Returns false (after saving a screenshot to the logging folder) if the tab never appears.
+		/// </summary>
+		public static bool OpenInventoryTab(InventoryPage page)
+		{
+			InventoryScreen();
+			// Retry waits are fixed real time (1 s, 2 s, ...) so they don't shrink at the Fast delay setting.
+			bool confirmed = SelectInventoryTab(page, () => ClickInventoryTab(page), ReadInventoryHeader, attempt => Wait(attempt * 1000));
+			if (!confirmed)
+			{
+				try
+				{
+					Directory.CreateDirectory("./logging");
+					using (var window = CaptureWindow())
+						window.Save($"./logging/tab-check-failed-{page}.png");
+				}
+				catch (Exception ex) { Logger.Warn(ex, "Could not save the tab check screenshot"); }
+			}
+			return confirmed;
+		}
+
+		/// <summary>Click, read the tab name, and retry with growing waits. Separated from the game for testing.</summary>
+		internal static bool SelectInventoryTab(InventoryPage page, Action clickTab, Func<string> readHeader, Action<int> waitBeforeRetry, int attempts = TabAttempts)
+		{
+			for (int attempt = 1; attempt <= attempts; attempt++)
+			{
+				clickTab();
+				string header = readHeader() ?? string.Empty;
+				if (HeaderShowsTab(header, page))
+				{
+					Logger.Info("Inventory tab {0} confirmed (try {1})", page, attempt);
+					return true;
+				}
+				Logger.Warn("Inventory tab check {0}/{1}: expected {2}, header reads \"{3}\"", attempt, attempts, page, Regex.Replace(header, @"\s+", " ").Trim());
+				if (attempt < attempts) waitBeforeRetry(attempt);
+			}
+			Logger.Error("Could not switch to the {0} inventory tab after {1} tries", page, attempts);
+			return false;
+		}
+
+		/// <summary>
+		/// True when the header text names <paramref name="page"/> and no other tab.
+		/// Allows OCR slips: 1 letter for short names, 2 for names of 9+ letters.
+		/// </summary>
+		internal static bool HeaderShowsTab(string header, InventoryPage page)
+		{
+			if (!TabNames.ContainsKey(page)) throw new ArgumentException($"No tab name known for {page}", nameof(page));
+
+			// OCR often reads "l" as "1" and "o" as "0"; undo that so a word isn't split at the digit.
+			string text = (header ?? string.Empty).ToLowerInvariant().Replace('1', 'l').Replace('0', 'o');
+			var words = Regex.Matches(text, "[a-z]+").Cast<Match>().Select(m => m.Value).ToList();
+
+			bool Names(string tabName) => words.Any(word =>
+				GenshinProcesor.LevenshteinDistance(word, tabName) <= (tabName.Length >= 9 ? 2 : 1));
+
+			return Names(TabNames[page]) && TabNames.Where(t => t.Key != page).All(t => !Names(t.Value));
+		}
+
+		/// <summary>Where the tab name sits, on the same 1280x720 scale as the tab buttons. It can wrap to two lines.</summary>
+		internal static RECT GetInventoryHeaderRegion(int width, int height)
+		{
+			return new RECT(
+				Left:   (int)(85  / 1280.0 * width),
+				Top:    (int)(12  / 720.0  * height),
+				Right:  (int)(325 / 1280.0 * width),
+				Bottom: (int)(55  / 720.0  * height));
+		}
+
+		internal static string ReadInventoryHeader()
+		{
+			using (var header = CaptureRegion(GetInventoryHeaderRegion(GetWidth(), GetHeight())))
+				return ReadHeaderText(header);
+		}
+
+		/// <summary>OCR of the tab name: light text on a dark bar, so grayscale and invert first.</summary>
+		internal static string ReadHeaderText(Bitmap header)
+		{
+			Bitmap n = GenshinProcesor.ConvertToGrayscale(header);
+			try
+			{
+				GenshinProcesor.SetInvert(ref n);
+				return GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.SingleBlock);
+			}
+			finally { n.Dispose(); }
+		}
+
+		private static void ClickInventoryTab(InventoryPage page)
+		{
+			switch (page)
+			{
+				case InventoryPage.Weapons: SelectWeaponInventory(); break;
+				case InventoryPage.Artifacts: SelectArtifactInventory(); break;
+				case InventoryPage.CharacterDevelopmentItems: SelectCharacterDevelopmentInventory(); break;
+				case InventoryPage.Materials: SelectMaterialInventory(); break;
+				default: throw new ArgumentException($"No tab button known for {page}", nameof(page));
+			}
+		}
+
+		#endregion Inventory tab check
 
 		public static void SelectCharacterAttributes()
 		{

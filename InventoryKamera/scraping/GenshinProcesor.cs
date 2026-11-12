@@ -489,7 +489,7 @@ namespace InventoryKamera
             }
         }
 
-		private static int LevenshteinDistance(string s1, string s2)
+		internal static int LevenshteinDistance(string s1, string s2)
 		{
             int m = s1.Length;
             int n = s2.Length;

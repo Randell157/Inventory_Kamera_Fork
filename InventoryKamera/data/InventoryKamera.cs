@@ -232,8 +232,7 @@ namespace InventoryKamera
 			{
 				Logger.Info("Scanning weapons...");
 				// Get Weapons
-				Navigation.InventoryScreen();
-				Navigation.SelectWeaponInventory();
+				if (OpenTabOrReport(InventoryPage.Weapons, "Weapons"))
 				try
 				{
                     weaponScraper.ScanWeapons();
@@ -253,8 +252,7 @@ namespace InventoryKamera
 				Logger.Info("Scanning artifacts...");
 
 				// Get Artifacts
-				Navigation.InventoryScreen();
-				Navigation.SelectArtifactInventory();
+				if (OpenTabOrReport(InventoryPage.Artifacts, "Artifacts"))
 				try
 				{
 					artifactScraper.ScanArtifacts();
@@ -306,9 +304,8 @@ namespace InventoryKamera
 			{
 				Logger.Info("Scanning character development materials...");
 				// Get Materials
-				Navigation.InventoryScreen();
-				Navigation.SelectCharacterDevelopmentInventory();
 				HashSet<Material> devItems = new HashSet<Material>();
+				if (OpenTabOrReport(InventoryPage.CharacterDevelopmentItems, "Character Development Items"))
 				try
 				{
 					materialScraper.SetInventoryPage(InventoryPage.CharacterDevelopmentItems);
@@ -329,9 +326,8 @@ namespace InventoryKamera
 			{
 				Logger.Info("Scanning materials...");
 				// Get Materials
-				Navigation.InventoryScreen();
-				Navigation.SelectMaterialInventory();
 				HashSet<Material> materials = new HashSet<Material>();
+				if (OpenTabOrReport(InventoryPage.Materials, "Materials"))
 				try
 				{
 					materialScraper.SetInventoryPage(InventoryPage.Materials);
@@ -346,6 +342,17 @@ namespace InventoryKamera
 				Navigation.MainMenuScreen();
 				Logger.Info("Done scanning materials");
 			}
+		}
+
+		/// <summary>
+		/// Opens an inventory tab and confirms it by name. If the tab can't be confirmed, reports an error
+		/// and returns false so the caller skips that section instead of scanning the wrong tab.
+		/// </summary>
+		private static bool OpenTabOrReport(InventoryPage page, string tabName)
+		{
+			if (Navigation.OpenInventoryTab(page)) return true;
+			UserInterface.AddError($"Couldn't switch to the {tabName} tab, so it was skipped. See logging\\tab-check-failed-{page}.png");
+			return false;
 		}
 
 		private void AwaitProcessors()
