@@ -367,11 +367,23 @@ namespace InventoryKamera
                 var skills = JArray.Parse(LoadJsonFromURLAsync(SkillsURL)).ToObject<List<JObject>>();
 
                 characters.RemoveAll(c => !c.ContainsKey("useType") || c["useType"].ToString() != "AVATAR_FORMAL");
+                // Fixed order (and the sequential loop below) makes the output independent of source row order.
+                characters = characters.OrderBy(c => (int)c["id"]).ToList();
+                talents = talents.OrderBy(t => (int)t["talentId"]).ToList();
+                skills = skills.OrderBy(s => (int)s["id"]).ToList();
+
+                // Alternate Traveler avatars share icons but can have different weapons.
+                // Keep exactly one Traveler row so they can't race to write the entry.
+                // (Adapted from dmitry-shishkin/Inventory_Kamera 1.4.11, MIT.)
+                var traveler = characters.FirstOrDefault(c => (string)c["iconName"] == "UI_AvatarIcon_PlayerBoy");
+                characters.RemoveAll(c => (string)c["iconName"] == "UI_AvatarIcon_PlayerGirl" ||
+                    ((string)c["iconName"] == "UI_AvatarIcon_PlayerBoy" && c != traveler));
 
                 Logger.Debug("Found {0} playable characters available", characters.Count);
-                characters.AsParallel().ForAll(character =>
+                characters.ForEach(character =>
                 {
                     string name = Mappings[character["nameTextMapHash"].ToString()].ToString();
+                    bool isTraveler = character == traveler;
 
                     try
                     {
@@ -392,7 +404,8 @@ namespace InventoryKamera
 
                         var value = new JObject();
 
-                        if (!newData.ContainsKey(nameKey))
+                        // The Traveler is always rebuilt, so new elements reach existing tables.
+                        if (isTraveler || !newData.ContainsKey(nameKey))
                         {
                             value.Add("GOOD", nameGOOD);
 
@@ -404,18 +417,22 @@ namespace InventoryKamera
                             {
                                 var constellationNames = new JArray { "Viator", "Viatrix" };
                                 var constellationOrder = new JObject();
+                                value.Add("ConstellationName", constellationNames);
 
+                                // Keys are the game's internal element names ("Ice" is Cryo).
                                 var playerElements = new Dictionary<string, string>
                                 {
                                     { "Electric", "electro" },
                                     { "Fire", "pyro" },
                                     { "Grass", "dendro" },
+                                    { "Ice", "cryo" },
                                     { "Rock", "geo"},
                                     { "Water", "hydro"},
                                     { "Wind", "anemo"}
                                 };
 
-                                value.Add("Element", new JArray(playerElements.Values));
+                                // Only elements whose skills exist in the game data are listed.
+                                var availableElements = new JArray();
 
                                 foreach (var element in playerElements)
                                 {
@@ -425,25 +442,32 @@ namespace InventoryKamera
                                     if (elementSkill == null) continue;
 
                                     skill = Mappings[elementSkill["nameTextMapHash"].ToString()].ToString();
+                                    var elementBurst = skills.First(entry => entry.Value<string>("skillIcon")?.Contains($"Player{element.Key}") == true && entry.ContainsKey("costElemType"));
+                                    var burst = Mappings[elementBurst["nameTextMapHash"].ToString()];
 
-                                    const3Description = talents.Where(entry => entry.Value<string>("openConfig")?.Contains($"Player_{element.Key}") == true).ElementAt(2)["descTextMapHash"].ToString();
-                                    const3Description = Mappings[const3Description].ToString();
-
-                                    if (const3Description.Contains(skill))
+                                    // Read C3 and C5 separately; each names the talent it raises.
+                                    var order = new JArray();
+                                    foreach (var constellationNumber in new[] { 3, 5 })
                                     {
-                                        constellationOrder.Add(element.Value, new JArray { "skill", "burst" });
+                                        var talent = talents.Single(entry => entry.Value<string>("openConfig") == $"Player_{element.Key}_Constellation_{constellationNumber}");
+                                        var description = Mappings[talent["descTextMapHash"].ToString()];
+                                        if (description.Contains(skill)) order.Add("skill");
+                                        else if (description.Contains(burst)) order.Add("burst");
+                                        else throw new InvalidDataException($"Cannot identify Traveler {element.Value} constellation {constellationNumber} talent.");
                                     }
-                                    else
-                                    {
-                                        constellationOrder.Add(element.Value, new JArray { "burst", "skill" });
-                                    }
+                                    availableElements.Add(element.Value);
+                                    constellationOrder.Add(element.Value, order);
                                 }
+                                value.Add("Element", availableElements);
                                 value.Add("ConstellationOrder", constellationOrder);
                             }
                             else // Any other character that isn't traveler
                             {
 
-                                var characterSkill = skills.FirstOrDefault(entry => entry.Value<string>("skillIcon")?.Contains($"Skill_S_{name}") == true);
+                                var characterSkill = skills
+                                    .Where(entry => entry.Value<string>("skillIcon")?.Contains($"Skill_S_{name}") == true)
+                                    .OrderBy(entry => entry.Value<string>("skillIcon"), StringComparer.Ordinal)
+                                    .FirstOrDefault();
 
                                 if (characterSkill == null)
                                 {
@@ -510,13 +534,24 @@ namespace InventoryKamera
 
                             value.Add("WeaponType", (int)weaponType);
 
-                            if (newData.TryAdd(nameKey, value)) status = UpdateStatus.Success;
+                            if (isTraveler)
+                            {
+                                // Replace the cached Traveler only when the rebuilt entry differs.
+                                if (!newData.TryGetValue(nameKey, out var existing) || !JToken.DeepEquals(existing, value))
+                                {
+                                    newData[nameKey] = value;
+                                    if (status != UpdateStatus.Fail) status = UpdateStatus.Success;
+                                }
+                            }
+                            else if (newData.TryAdd(nameKey, value) && status != UpdateStatus.Fail) status = UpdateStatus.Success;
                         }
                     }
                     catch (Exception ex)
                     {
                         Logger.Warn("Problem when generating character information for {0}", name);
                         Logger.Warn(ex);
+                        // A broken Traveler entry fails the update, so the saved table is kept as it was.
+                        if (isTraveler) status = UpdateStatus.Fail;
                     }
                 });
 

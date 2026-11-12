@@ -19,4 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\InventoryKamera\InventoryKamera.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

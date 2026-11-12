@@ -229,7 +229,7 @@ This is a maintained fork. The source code lives at [Randell157/Inventory_Kamera
 
 - [Andrewthe13th/Inventory_Kamera](https://github.com/Andrewthe13th/Inventory_Kamera): the original Inventory Kamera.
 - [taiwenlee/Inventory_Kamera](https://github.com/taiwenlee/Inventory_Kamera): the fork this one is based on (version 1.4.5).
-- [dmitry-shishkin/Inventory_Kamera](https://github.com/dmitry-shishkin/Inventory_Kamera): the SDK-style build setup is adapted from its 1.4.11 release (MIT).
+- [dmitry-shishkin/Inventory_Kamera](https://github.com/dmitry-shishkin/Inventory_Kamera): the SDK-style build setup and the Cryo Traveler lookup fix (with its offline tests and recorded game data) are adapted from its 1.4.11 release (MIT).
 
 ## License
 
