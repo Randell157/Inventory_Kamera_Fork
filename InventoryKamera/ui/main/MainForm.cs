@@ -311,11 +311,14 @@ namespace InventoryKamera
                         Logger.Info("Data converted to GOOD");
 
                         // Make Json File
-                        good.WriteToJSON(OutputPath_TextBox.Text);
+                        string outputFile = good.WriteToJSON(OutputPath_TextBox.Text);
                         Logger.Info("Exported data");
 
                         UserInterface.SetProgramStatus("Finished");
-                        OpenOptimizerDialog(good);
+                        // No "upload to Genshin Optimizer?" prompt after a scan. The
+                        // "Open Genshin Optimizer" button still does it on request.
+                        NotifyScanEnded("Scan complete",
+                            good.CompletionSummary(outputFile, UserInterface.ErrorCount), MessageBoxIcon.Information);
                     }
                     catch (ThreadAbortException)
                     {
@@ -334,6 +337,10 @@ namespace InventoryKamera
                         while (ex.InnerException != null) ex = ex.InnerException;
                         UserInterface.AddError(ex.ToString());
                         UserInterface.SetProgramStatus("Scan aborted", ok: false);
+                        NotifyScanEnded("Scan stopped",
+                            "The scan stopped because of an error:" + Environment.NewLine + ex.Message +
+                            Environment.NewLine + Environment.NewLine + "See the error log in the window for details.",
+                            MessageBoxIcon.Error);
                     }
                     finally
                     {
@@ -360,15 +367,54 @@ namespace InventoryKamera
             }
         }
 
-        private void OpenOptimizerDialog(GOOD data, bool skip = false)
+        #region Scan-ended notification
+
+        // The game usually has focus when a scan ends, and Windows won't let this window jump in
+        // front of it. So flash the taskbar button until the window is brought forward, and show
+        // a summary popup (OK only, no questions).
+        private void NotifyScanEnded(string title, string message, MessageBoxIcon icon)
         {
-            if (!skip)
+            BeginInvoke((MethodInvoker)delegate
             {
-                var message = "Scan complete! Would you like to upload the database to Genshin Optimizer?";
-                var result = MessageBox.Show(message, "Scan Complete", MessageBoxButtons.YesNo);
-                if (result == DialogResult.No)
-                    return;
-            }
+                FlashTaskbar();
+                MessageBox.Show(this, message, title, MessageBoxButtons.OK, icon);
+            });
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct FLASHWINFO
+        {
+            public uint cbSize;
+            public IntPtr hwnd;
+            public uint dwFlags;
+            public uint uCount;
+            public uint dwTimeout;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern bool FlashWindowEx(ref FLASHWINFO pwfi);
+
+        private const uint FLASHW_ALL = 3;        // flash the caption and the taskbar button
+        private const uint FLASHW_TIMERNOFG = 12; // keep flashing until the window comes to the foreground
+
+        private void FlashTaskbar()
+        {
+            var info = new FLASHWINFO
+            {
+                cbSize = (uint)Marshal.SizeOf(typeof(FLASHWINFO)),
+                hwnd = Handle,
+                dwFlags = FLASHW_ALL | FLASHW_TIMERNOFG,
+                uCount = uint.MaxValue,
+                dwTimeout = 0,
+            };
+            FlashWindowEx(ref info);
+        }
+
+        #endregion Scan-ended notification
+
+        // Copies the scan to the clipboard and opens Genshin Optimizer. Only used by the button.
+        private void OpenOptimizerDialog(GOOD data)
+        {
             var t = new Thread(() => Clipboard.SetText(data.ToString()));
             t.SetApartmentState(ApartmentState.STA);
             t.Start();
@@ -651,7 +697,7 @@ namespace InventoryKamera
 
         private void Export_Button_Click(object sender, EventArgs e)
         {
-            OpenOptimizerDialog(new GOOD(data), true);
+            OpenOptimizerDialog(new GOOD(data));
         }
 
         private void MainForm_Activate()

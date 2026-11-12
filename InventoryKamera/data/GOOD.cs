@@ -93,7 +93,33 @@ namespace InventoryKamera
                 .ForEach(material => Materials.Add(material.name, material.count));
         }
 
-        internal void WriteToJSON(string outputDirectory)
+        /// <summary>
+        /// Text for the scan-complete popup: what was exported, where, and how many errors were reported.
+        /// </summary>
+        internal string CompletionSummary(string outputFile, int errorCount)
+        {
+            var parts = new List<string>();
+            void Add(int count, string one, string many) { if (count > 0) parts.Add($"{count} {(count == 1 ? one : many)}"); }
+            Add(Characters?.Count ?? 0, "character", "characters");
+            Add(Weapons?.Count ?? 0, "weapon", "weapons");
+            Add(Artifacts?.Count ?? 0, "artifact", "artifacts");
+            Add(Materials?.Count ?? 0, "material", "materials");
+
+            var lines = new List<string>
+            {
+                parts.Count > 0 ? "Exported: " + string.Join(", ", parts) : "Nothing was exported.",
+                "",
+                "File: " + Path.GetFileName(outputFile),
+                "Folder: " + Path.GetDirectoryName(outputFile),
+                "",
+                errorCount == 0 ? "No errors."
+                    : $"{errorCount} {(errorCount == 1 ? "error" : "errors")}: see the error log in the window.",
+            };
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        /// <summary>Writes the export and returns the full path of the file.</summary>
+        internal string WriteToJSON(string outputDirectory)
         {
             // Creates directory if doesn't exist
             Directory.CreateDirectory(outputDirectory);
@@ -110,6 +136,7 @@ namespace InventoryKamera
             {
                 UserInterface.AddError($"Failed to output at : {outputDirectory}");
             }
+            return outputFile;
         }
 
         private void WriteToJson(string outputFile)

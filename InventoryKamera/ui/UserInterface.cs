@@ -247,8 +247,14 @@ namespace InventoryKamera
 			programStatus_Label.Invoke(statusAction);
 		}
 
+		private static int errorCount;
+
+		/// <summary>Errors reported since the last reset (start of a scan). Shown in the scan-complete summary.</summary>
+		public static int ErrorCount => System.Threading.Volatile.Read(ref errorCount);
+
 		public static void AddError(string error)
 		{
+			System.Threading.Interlocked.Increment(ref errorCount);
 			UpdateTextBox($"{error.Replace("\n", Environment.NewLine)}" + Environment.NewLine, error_TextBox);
 			Logger.Error(error);
 		}
@@ -302,6 +308,7 @@ namespace InventoryKamera
 
 		public static void ResetErrors()
 		{
+			System.Threading.Interlocked.Exchange(ref errorCount, 0);
 			MethodInvoker textAction = delegate { error_TextBox.Clear(); };
 
 			error_TextBox.Invoke(textAction);
