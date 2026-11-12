@@ -307,23 +307,23 @@ namespace InventoryKamera
 
 			string text = GenshinProcesor.AnalyzeText(n).Trim();
 			n.Dispose();
-			text = Regex.Replace(text, @"(?![\d/]).", string.Empty);
 
-			if (text.Contains('/'))
+			// Same checked reading as characters, with weapon caps (20-90).
+			switch (LevelReading.Read(text, LevelReading.WeaponCaps, out int level, out int maxLevel))
 			{
-				string[] temp = text.Split(new[] { '/' }, 2);
+				case LevelReadResult.Valid:
+					ascended = LevelReading.IsAscended(level, maxLevel);
+					return level;
 
-				if (temp.Length == 2)
-				{
-					if (int.TryParse(temp[0], out int level) && int.TryParse(temp[1], out int maxLevel))
-					{
-						maxLevel = (int)Math.Round(maxLevel / 10.0, MidpointRounding.AwayFromZero) * 10;
-						ascended = 20 <= level && level < maxLevel;
-						return level;
-					}
-				}
+				case LevelReadResult.LevelOnly:
+					// Keep the weapon (as before) but don't guess its ascension.
+					Logger.Warn("Weapon level cap unreadable in \"{0}\"; using level {1}, not ascended", text, level);
+					ascended = false;
+					return level;
+
+				default:
+					return -1;
 			}
-			return -1;
 		}
 
 		public int ScanRefinement(Bitmap image)

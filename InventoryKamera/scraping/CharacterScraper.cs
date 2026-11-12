@@ -125,12 +125,16 @@ namespace InventoryKamera
 			{
 				bool ascended = false;
 				// Scan Level and ascension
-				int level = ScanLevel(ref ascended);
+				int level = ScanLevel(ref ascended, out bool capUncertain);
 				if (level == -1)
 				{
 					UserInterface.AddError($"Could not determine {character.NameGOOD}'s level. Setting to 1.");
 					level = 1;
 					ascended = false;
+				}
+				else if (capUncertain)
+				{
+					UserInterface.AddError($"Could not read {character.NameGOOD}'s level cap. Exported level {level} as not ascended; please check their ascension.");
 				}
 				character.Level = level;
 				character.Ascended = ascended;
@@ -297,9 +301,13 @@ namespace InventoryKamera
 			element = null;
 		}
 
-		private static int ScanLevel(ref bool ascended)
+		/// <param name="capUncertain">True when the level was read but no valid cap was found in any attempt.
+		/// The level is then returned and the character is treated as not ascended.</param>
+		private static int ScanLevel(ref bool ascended, out bool capUncertain)
 		{
             int attempt = 0;
+			int levelWithoutCap = 0;
+			capUncertain = false;
 
             var xRef = 1280.0;
 			var yRef = 720.0;
@@ -326,22 +334,18 @@ namespace InventoryKamera
 				string text = GenshinProcesor.AnalyzeText(n).Trim();
 				Logger.Debug("Scanned character level as {0}", text);
 
-				text = Regex.Replace(text, @"(?![0-9/]).", string.Empty);
-				Logger.Debug("Filtered scanned text to {0}", text);
-				if (text.Contains("/"))
+				// Accept only a real cap that fits the level (e.g. "80 / 9C" -> 80/90), never a guessed one.
+				var result = LevelReading.Read(text, LevelReading.CharacterCaps, out int level, out int maxLevel);
+				if (result == LevelReadResult.Valid)
 				{
-					var values = text.Split('/');
-                    if (int.TryParse(values[0], out int level) && int.TryParse(values[1], out int maxLevel))
-                    {
-                        maxLevel = (int)Math.Round(maxLevel / 10.0, MidpointRounding.AwayFromZero) * 10;
-                        ascended = 20 <= level && level < maxLevel;
-                        UserInterface.SetCharacter_Level(bm, level, maxLevel);
-                        n.Dispose();
-                        bm.Dispose();
-                        Logger.Debug("Parsed character level as {0}", level);
-                        return level;
-                    }
+					ascended = LevelReading.IsAscended(level, maxLevel);
+					UserInterface.SetCharacter_Level(bm, level, maxLevel);
+					n.Dispose();
+					bm.Dispose();
+					Logger.Debug("Parsed character level as {0} / {1}", level, maxLevel);
+					return level;
 				}
+				if (result == LevelReadResult.LevelOnly) levelWithoutCap = level;
 				Logger.Debug("Failed to parse character level and ascension from {0} (text), retrying", text);
 
 				attempt++;
@@ -351,6 +355,13 @@ namespace InventoryKamera
                 Navigation.SystemWait(Navigation.Speed.Fast);
 			} while (attempt < 50);
 
+			if (levelWithoutCap > 0)
+			{
+				// Keep the level we could read rather than dropping to level 1; the caller reports it.
+				capUncertain = true;
+				ascended = false;
+				return levelWithoutCap;
+			}
 			return -1;
 		}
 
