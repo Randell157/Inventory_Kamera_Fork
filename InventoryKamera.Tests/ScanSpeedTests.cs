@@ -46,6 +46,45 @@ namespace InventoryKamera.Tests
             Assert.AreEqual(4, ScanSpeeds.Stored(-1, 2));
             Assert.AreEqual(3, ScanSpeeds.Stored(3, 0), "after that: the drop-down's own setting");
             Assert.AreEqual(2, ScanSpeeds.Stored(12, 1), "a broken value is replaced from the old setting");
+            Assert.AreEqual(ScanSpeeds.Auto, ScanSpeeds.Stored(ScanSpeeds.Auto, 0), "Auto is kept");
+        }
+
+        [TestMethod]
+        public void AutoComesFirstAndSavedFastestStays()
+        {
+            Assert.AreEqual(6, ScanSpeeds.ChoiceCount);
+            Assert.AreEqual(ScanSpeeds.Auto, ScanSpeeds.StepAt(0));
+            Assert.AreEqual(0, ScanSpeeds.ChoiceOf(ScanSpeeds.Auto));
+            for (int step = 0; step < ScanSpeeds.Count; step++)
+            {
+                Assert.AreEqual(step + 1, ScanSpeeds.ChoiceOf(step), "fixed speeds follow Auto");
+                Assert.AreEqual(step, ScanSpeeds.StepAt(ScanSpeeds.ChoiceOf(step)), "saved 0-4 keep their meaning");
+            }
+            Assert.AreEqual(5, ScanSpeeds.Auto, "Auto is saved as 5, after the fixed speeds");
+        }
+
+        [TestMethod]
+        public void AutoTexts()
+        {
+            int a = ScanSpeeds.Auto;
+            Assert.IsTrue(ScanSpeeds.IsAuto(a));
+            Assert.AreEqual("Auto (recommended)", ScanSpeeds.ItemText(a));
+            Assert.AreEqual("= waits for each card", ScanSpeeds.HintText(a));
+            Assert.AreEqual("Auto (waits for each card, up to 800 ms)", ScanSpeeds.LogText(a));
+            Assert.AreEqual(3, ScanSpeeds.Workers(a));
+            Assert.AreEqual(1, ScanSpeeds.Factor(a), "menus and characters use the Normal waits");
+            Assert.AreEqual(
+                "Waits with Auto:\n" +
+                "after each item: until its card stops changing\n" +
+                "(checked every 15 ms, at most 800 ms)\n" +
+                "after switching character: 700 ms\n" +
+                "after opening a menu: 2 s\n" +
+                "OCR workers: 3\n" +
+                "Waiting for 1,000 items: depends on your PC\n" +
+                "\n" +
+                "Auto: waits only as long as each card needs, so it is\n" +
+                "fast and reliable, but it is new and needs a live check.",
+                ScanSpeeds.TooltipText(a, forChoice: true));
         }
 
         [TestMethod]

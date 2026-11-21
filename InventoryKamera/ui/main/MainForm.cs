@@ -354,6 +354,7 @@ namespace InventoryKamera
 
                         // Add navigation delay
                         Navigation.SetDelay(ScanSpeeds.Factor(Properties.Settings.Default.ScanSpeed));
+                        Navigation.AutoItemWait = ScanSpeeds.IsAuto(Properties.Settings.Default.ScanSpeed);
 
 
                         // The Data object of json object
@@ -541,14 +542,14 @@ namespace InventoryKamera
             scanSpeedToolTip = new ToolTip(components) { AutoPopDelay = 30000 };
             scanChoiceToolTip = new ToolTip(components);
             ScanSpeed_ComboBox.Items.Clear();
-            for (int i = 0; i < ScanSpeeds.Count; i++) ScanSpeed_ComboBox.Items.Add(ScanSpeeds.ItemText(i));
-            ScanSpeed_ComboBox.SelectedIndex = step;   // raises SelectedIndexChanged, which fills the hint and tooltip
+            for (int i = 0; i < ScanSpeeds.ChoiceCount; i++) ScanSpeed_ComboBox.Items.Add(ScanSpeeds.ItemText(ScanSpeeds.StepAt(i)));
+            ScanSpeed_ComboBox.SelectedIndex = ScanSpeeds.ChoiceOf(step);   // raises SelectedIndexChanged, which fills the hint and tooltip
         }
 
         private void ScanSpeed_ComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            int step = ScanSpeed_ComboBox.SelectedIndex;
-            if (step < 0) return;
+            if (ScanSpeed_ComboBox.SelectedIndex < 0) return;
+            int step = ScanSpeeds.StepAt(ScanSpeed_ComboBox.SelectedIndex);
             Properties.Settings.Default.ScanSpeed = step;
             ScanSpeedHint_Label.Text = ScanSpeeds.HintText(step);
             string tip = ScanSpeeds.TooltipText(step);
@@ -572,7 +573,7 @@ namespace InventoryKamera
             {
                 shownChoiceTip = e.Index;
                 // Beside the list, level with the choice. The list opens right under the box.
-                scanChoiceToolTip.Show(ScanSpeeds.TooltipText(e.Index, forChoice: true), ScanSpeed_ComboBox,
+                scanChoiceToolTip.Show(ScanSpeeds.TooltipText(ScanSpeeds.StepAt(e.Index), forChoice: true), ScanSpeed_ComboBox,
                     ScanSpeed_ComboBox.Width + 6, ScanSpeed_ComboBox.Height + e.Bounds.Top);
             }
         }

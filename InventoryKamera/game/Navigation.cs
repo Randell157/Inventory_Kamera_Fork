@@ -25,6 +25,8 @@ namespace InventoryKamera
 		public static bool IsNormal { get; private set; }
 
         private static double delay = 1;
+        // Auto scan speed: no fixed wait after clicking a weapon or artifact; the card check waits instead.
+        public static bool AutoItemWait { get; set; }
 
 		public static VirtualKeyCode escapeKey = VirtualKeyCode.ESCAPE;
 		public static VirtualKeyCode characterKey = VirtualKeyCode.VK_C;

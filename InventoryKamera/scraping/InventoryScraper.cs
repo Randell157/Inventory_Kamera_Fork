@@ -74,27 +74,50 @@ namespace InventoryKamera
 
         internal bool StopScanning { get; set; }
 
+        private readonly CardSettle cardSettle = new CardSettle();
+
         /// <summary>
-        /// Gets the item card on the right side of the in-game screen
+        /// The item card once it has stopped changing (see <see cref="CardSettle"/>). Used for weapons and
+        /// artifacts, right after clicking an item and the scan speed's wait.
+        /// </summary>
+        internal Bitmap GetSettledItemCard(bool isWeapon)
+        {
+            bool auto = Navigation.AutoItemWait;
+            int waitedBefore = auto ? 0 : (int)(Navigation.BaseWait(Navigation.Speed.SelectNextInventoryItem) * Navigation.GetDelay());
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            return cardSettle.Settle(GetItemCard, size => CardSettle.CardRegions(size, Navigation.IsNormal, isWeapon),
+                Navigation.Wait, () => clock.ElapsedMilliseconds,
+                auto ? CardSettle.AutoGiveUpMs : CardSettle.GiveUpMs, waitedBefore);
+        }
+
+        internal string CardSettleSummary(string items) => cardSettle.Summary(items);
+
+        /// <summary>
+        /// The wait after clicking a weapon or artifact. On the Auto scan speed there is none: the card
+        /// check in <see cref="GetSettledItemCard"/> waits as long as the card needs.
+        /// </summary>
+        internal static void WaitAfterSelectingCard()
+        {
+            if (!Navigation.AutoItemWait) Navigation.SystemWait(Navigation.Speed.SelectNextInventoryItem);
+        }
+
+        /// <summary>
+        /// Where the item card is on the right side of the game window.
+        /// </summary>
+        internal static Rectangle CardRectangle(Size window, bool isNormal) => new Rectangle(
+            x: (int)(window.Width * 0.6807),
+            y: (int)(window.Height * (isNormal ? 0.1102 : 0.0989)),
+            width: (int)(window.Width * 0.2573),
+            height: (int)(window.Height * (isNormal ? 0.7787 : 0.8022)));
+
+        /// <summary>
+        /// Gets the item card on the right side of the in-game screen. Only the card area is copied from
+        /// the screen, because the card check captures it many times per item.
         /// </summary>
         /// <returns>An image of the in-game item card</returns>
         internal Bitmap GetItemCard()
         {
-            Rectangle cardRectangle = new Rectangle();
-
-            using (var window = Navigation.CaptureWindow())
-            {
-
-                cardRectangle.X = (int)(window.Width * 0.6807);
-                cardRectangle.Y = (int)(window.Height * (Navigation.IsNormal ? 0.1102 : 0.0989));
-
-                cardRectangle.Width = (int)(window.Width * 0.2573);
-                cardRectangle.Height = (int)(window.Height * (Navigation.IsNormal ? 0.7787 : 0.8022));
-
-
-                return GenshinProcesor.CopyBitmap(window, cardRectangle);
-            }
-
+            return Navigation.CaptureRegion(CardRectangle(new Size(Navigation.GetWidth(), Navigation.GetHeight()), Navigation.IsNormal));
         }
 
         /// <summary>

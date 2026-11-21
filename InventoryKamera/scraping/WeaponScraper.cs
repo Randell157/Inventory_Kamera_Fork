@@ -56,7 +56,7 @@ namespace InventoryKamera
                     Rectangle item = rectangles[i];
                     Navigation.SetCursor(item.Center().X, item.Center().Y + offset);
                     Navigation.Click();
-                    Navigation.SystemWait(Navigation.Speed.SelectNextInventoryItem);
+                    WaitAfterSelectingCard();
 
                     // Queue card for scanning
                     QueueScan(cardsQueued);
@@ -165,7 +165,7 @@ namespace InventoryKamera
 
         private void QueueScan(int id)
         {
-			var card = GetItemCard();
+			var card = GetSettledItemCard(isWeapon: true);
 
             Bitmap name, level, refinement, equipped, locked;
             name = GetItemNameBitmap(card);

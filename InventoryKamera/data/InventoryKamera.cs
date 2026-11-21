@@ -187,6 +187,7 @@ namespace InventoryKamera
 					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
 				}
 				Navigation.MainMenuScreen();
+				Logger.Info(weaponScraper.CardSettleSummary("weapons"));
 				Logger.Info("Done scanning weapons");
 			}
 
@@ -207,6 +208,7 @@ namespace InventoryKamera
 					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
 				}
 				Navigation.MainMenuScreen();
+				Logger.Info(artifactScraper.CardSettleSummary("artifacts"));
 				Logger.Info("Done scanning artifacts");
 			}
 
