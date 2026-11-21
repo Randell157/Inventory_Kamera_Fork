@@ -220,6 +220,7 @@ namespace InventoryKamera
 				Logger.Info("Switching to party slot 1 (slot 1 key: {0})", Navigation.slotOneKey);
 				// Get characters
 				Navigation.CharacterScreen();
+				ScreenSettle.Reset();
 				try
 				{
 					characterScraper.ScanCharacters(ref Characters);
@@ -230,6 +231,7 @@ namespace InventoryKamera
 					UserInterface.AddError(ex.Message + "\n" + ex.StackTrace);
 				}
 				Navigation.MainMenuScreen();
+				Logger.Info(ScreenSettle.Summary());
 				Logger.Info("Done scanning characters");
 			}
 

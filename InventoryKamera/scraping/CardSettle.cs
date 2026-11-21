@@ -128,10 +128,11 @@ namespace InventoryKamera
         }
 
         /// <summary>
-        /// True when two captures show the same thing in every region: in each, at most 0.5% of the
-        /// pixels (and at least 3) may differ by more than a small color tolerance.
+        /// True when two captures show the same thing in every region: in each, at most
+        /// <paramref name="allowedFraction"/> of the pixels (0.5% by default, and at least 3) may differ
+        /// by more than a small color tolerance.
         /// </summary>
-        internal static bool Matches(Bitmap a, Bitmap b, IList<Rectangle> regions)
+        internal static bool Matches(Bitmap a, Bitmap b, IList<Rectangle> regions, double allowedFraction = 0.005)
         {
             if (ReferenceEquals(a, b)) return true;   // a bitmap can't be locked twice at once
             if (a.Size != b.Size) return false;
@@ -149,7 +150,7 @@ namespace InventoryKamera
                 {
                     Rectangle r = Rectangle.Intersect(r0, whole);
                     if (r.Width <= 0 || r.Height <= 0) continue;
-                    int allowed = Math.Max(3, r.Width * r.Height / 200);
+                    int allowed = Math.Max(3, (int)(r.Width * r.Height * allowedFraction));
                     int changed = 0;
                     for (int y = r.Top; y < r.Bottom; y++)
                     {

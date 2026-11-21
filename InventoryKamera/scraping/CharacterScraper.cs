@@ -151,16 +151,29 @@ namespace InventoryKamera
 				//Navigation.SystemRandomWait(Navigation.Speed.Normal);
 
 				// Scan Constellation
-				Navigation.SelectCharacterConstellation();
+				if (!Navigation.SelectCharacterConstellation())
+				{
+					// Clicking nodes on another screen read Chiori and Navia as C6 (2026-11-21); leave them out instead.
+					UserInterface.AddError($"Couldn't open {character.NameGOOD}'s constellations; skipped them. Try a slower scan speed if this repeats.");
+					Logger.Error("Couldn't open {0}'s constellation screen; character skipped", character.NameGOOD);
+					// Keep what the game showed instead, so a failure can be checked rather than guessed.
+					try
+					{
+						Directory.CreateDirectory($"./logging/characters/{character.NameGOOD}");
+						using (var screen = Navigation.CaptureWindow())
+							screen.Save($"./logging/characters/{character.NameGOOD}/open-constellation-failed.png");
+					}
+					catch (Exception e) { Logger.Debug("Couldn't save the failure screenshot: {0}", e.Message); }
+					character.Constellation = -1;
+					return character;
+				}
 				character.Constellation = ScanConstellations(character);
 				Logger.Info("{0} Constellation: {1}", character.NameGOOD, character.Constellation);
-				Navigation.SystemWait(Navigation.Speed.Normal);
 
 				// Scan Talents
 				Navigation.SelectCharacterTalents();
 				character.Talents = ScanTalents(character);
 				Logger.Info("{0} Talents: {1}", character.NameGOOD, "{" + string.Join(", ", character.Talents.Select(kv => kv.Key + "=" + kv.Value).ToArray()) + "}");
-				Navigation.SystemWait(Navigation.Speed.Normal);
 
 				// Scale down talents due to constellations
 				if (character.Constellation >= 3)
@@ -248,7 +261,9 @@ namespace InventoryKamera
 			Rectangle region = new RECT(
 				Left:   (int)( 85  / 1280.0 * Navigation.GetWidth() ),
 				Top:    (int)( 10  / 720.0 * Navigation.GetHeight() ),
-				Right:  (int)( 305 / 1280.0 * Navigation.GetWidth() ),
+				// Wide enough for "Anemo / Kaedehara Kazuha", ending in the gap before the first portrait.
+				// The Q key badge right after the name is cut off in ReadNameAndElement.
+				Right:  (int)( 355 / 1280.0 * Navigation.GetWidth() ),
 				Bottom: (int)( 55  / 720.0 * Navigation.GetHeight() ));
 
 			do
@@ -281,8 +296,42 @@ namespace InventoryKamera
 		// empty when they can't be read or don't belong together.
 		internal static void ReadNameAndElement(Bitmap bm, out string name, out string element)
 		{
+			ParseNameAndElement(ReadNameText(bm), out name, out element);
+		}
+
+		// "<element> / <name>" as read by OCR -> character and element, or both empty.
+		internal static void ParseNameAndElement(string nameAndElement, out string name, out string element)
+		{
 			name = ""; element = "";
-			Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
+			if (nameAndElement.Contains("/"))
+			{
+				var split = nameAndElement.Split('/');
+
+				// Long name characters might look like
+				// <Element>   <First Name>
+				// /           <Last Name>
+				// so the element is the first word. Anything that isn't a letter is dropped first: the edge
+				// of the element emblem is often read as "»" or ">" ("» cryo / skirk", 2026-11-21).
+				var words = Regex.Replace(split[0], @"[^\p{L}\s]", string.Empty)
+					.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+				element = words.Length > 0 ? GenshinProcesor.FindElementByName(words[0]) : "";
+
+				// Find character based on string after /
+				// Long name characters might search by their last name only but it'll still work.
+				name = GenshinProcesor.FindClosestCharacterName(Regex.Replace(split[1], @"[\W]", string.Empty));
+
+				if (!GenshinProcesor.CharacterMatchesElement(name, element)) { name = ""; element = ""; }
+			}
+		}
+
+		// OCR of the name area, lower case, cut off before the Q key badge.
+		internal static string ReadNameText(Bitmap bm)
+		{
+			int badge = KeyBadgeColumn(bm);
+			Bitmap cut = badge > 0 ? bm.Clone(new Rectangle(0, 0, badge, bm.Height), bm.PixelFormat) : (Bitmap)bm.Clone();
+
+			Bitmap n = GenshinProcesor.ConvertToGrayscale(cut);
+			cut.Dispose();
 			GenshinProcesor.SetThreshold(110, ref n);
 			GenshinProcesor.SetInvert(ref n);
 
@@ -291,23 +340,44 @@ namespace InventoryKamera
 			string line = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.SingleLine).ToLower().Trim();
 			n.Dispose();
 
+			// OCR sometimes puts a "/" before the element ("/anemo / kaedehara kazuha"), which would
+			// split off an empty element. Nothing is drawn there, so drop it.
+			block = block.TrimStart('/', ' ', '\t', '\n', '\r');
+			line = line.TrimStart('/', ' ', '\t');
+
 			// Characters with wrapped names will not have a slash
-			string nameAndElement = line.Contains("/") ? line : block;
+			return line.Contains("/") ? line : block;
+		}
 
-			if (nameAndElement.Contains("/"))
+		/// <summary>
+		/// The first column of the white Q key badge that follows the character's name, or -1 if there is none.
+		/// The badge is pure white; the name text is beige and never brighter than about 216, so a column
+		/// with many pixels above 235 in every channel is the badge. Everything from there on is not the name.
+		/// </summary>
+		internal static int KeyBadgeColumn(Bitmap bm)
+		{
+			var whole = new Rectangle(0, 0, bm.Width, bm.Height);
+			var data = bm.LockBits(whole, System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+			try
 			{
-				var split = nameAndElement.Split('/');
-
-				// Long name characters might look like
-				// <Element>   <First Name>
-				// /           <Last Name>
-				element = !split[0].Contains(" ") ? GenshinProcesor.FindElementByName(split[0].Trim()) : GenshinProcesor.FindElementByName(split[0].Split(' ')[0].Trim());
-
-				// Find character based on string after /
-				// Long name characters might search by their last name only but it'll still work.
-				name = GenshinProcesor.FindClosestCharacterName(Regex.Replace(split[1], @"[\W]", string.Empty));
-
-				if (!GenshinProcesor.CharacterMatchesElement(name, element)) { name = ""; element = ""; }
+				var px = new byte[data.Stride * bm.Height];
+				System.Runtime.InteropServices.Marshal.Copy(data.Scan0, px, 0, px.Length);
+				int needed = Math.Max(4, bm.Height * 15 / 100);
+				for (int x = 0; x < bm.Width; x++)
+				{
+					int white = 0;
+					for (int y = 0; y < bm.Height; y++)
+					{
+						int i = y * data.Stride + x * 3;
+						if (px[i] > 235 && px[i + 1] > 235 && px[i + 2] > 235) white++;
+					}
+					if (white >= needed) return x;
+				}
+				return -1;
+			}
+			finally
+			{
+				bm.UnlockBits(data);
 			}
 		}
 
@@ -438,10 +508,8 @@ namespace InventoryKamera
 				}
 
 				Navigation.SetCursor((int)( 1130 / 1280.0 * Navigation.GetWidth() ), yOffset);
-				Navigation.Click();
-
 				var pause = constellation == 0 ? 700 : 550;
-				Navigation.SystemWait(pause);
+				ScreenSettle.Run("constellation node", ScreenSettle.Area.ConstellationDetail, Navigation.Click, pause, clickAgain: true);
 
 				if (Properties.Settings.Default.LogScreenshots)
 				{
@@ -462,7 +530,8 @@ namespace InventoryKamera
 				}
 			}
 
-			Navigation.sim.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.ESCAPE);
+			ScreenSettle.Run("close constellation", ScreenSettle.Area.ConstellationDetail,
+				() => Navigation.sim.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.ESCAPE), Navigation.BaseWait(Navigation.Speed.Normal));
 			UserInterface.SetCharacter_Constellation(constellation);
 			return constellation;
 		}
@@ -500,9 +569,8 @@ namespace InventoryKamera
 				int yOffset = (int)( 110 / yRef * Navigation.GetHeight() ) + ( i + ( ( i == 2 ) ? specialOffset : 0 ) ) * (int)(60 / yRef * Navigation.GetHeight() );
 
 				Navigation.SetCursor((int)(1130 / xRef * Navigation.GetWidth()), yOffset);
-				Navigation.Click();
 				int pause = i == 0 ? 700 : 550;
-				Navigation.SystemWait(pause);
+				ScreenSettle.Run("talent", ScreenSettle.Area.TalentDetail, Navigation.Click, pause, clickAgain: true);
                 switch (i)
                 {
 					default:
@@ -542,7 +610,8 @@ namespace InventoryKamera
 				}
 			}
 
-			Navigation.sim.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.ESCAPE);
+			ScreenSettle.Run("close talents", ScreenSettle.Area.TalentDetail,
+				() => Navigation.sim.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.ESCAPE), Navigation.BaseWait(Navigation.Speed.Normal));
 			return talents;
 		}
 	}

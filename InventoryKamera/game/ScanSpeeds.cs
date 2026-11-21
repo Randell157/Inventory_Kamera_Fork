@@ -5,7 +5,8 @@ namespace InventoryKamera
 	// The "Delay per item" drop-down: Auto plus five fixed scan speeds. A fixed speed multiplies every
 	// wait in Navigation.BaseWait, so the window shows the same numbers the scan uses. Auto skips the
 	// fixed wait after each weapon or artifact and lets the card check (CardSettle) wait as long as the
-	// card needs; menus and character switching use the Normal waits.
+	// card needs. The character screens wait until they settle (ScreenSettle), at most the Normal
+	// waits; the other menus use the Normal waits.
 	internal static class ScanSpeeds
 	{
 		internal static readonly string[] Names = { "Fastest", "Fast", "Normal", "Slow", "Slowest" };
@@ -81,15 +82,18 @@ namespace InventoryKamera
 			"but the scan takes longer.";
 
 		private const string AutoTradeoffs =
-			"Auto: waits only as long as each card needs, so it is\n" +
-			"fast and reliable, but it is new and needs a live check.";
+			"Auto: waits only as long as each card and character\n" +
+			"screen needs, so it is fast and reliable, but it is new and\n" +
+			"needs a live check.";
 
 		// The hover text. For the current setting the heading is "Waits at this setting:"; for a choice
 		// pointed at in the open list it names that choice.
 		internal static string TooltipText(int step, bool forChoice = false) =>
 			(forChoice ? "Waits with " + Name(step) + ":" : "Waits at this setting:") + "\n" +
 			AfterEachItem(step) + "\n" +
-			"after switching character: " + Wait(step, Navigation.Speed.SelectNextCharacter) + "\n" +
+			(IsAuto(step)
+				? "on the character screens: until each screen stops\nchanging (at most the Normal waits)\n"
+				: "after switching character: " + Wait(step, Navigation.Speed.SelectNextCharacter) + "\n") +
 			"after opening a menu: " + Wait(step, Navigation.Speed.UI) + "\n" +
 			"OCR workers: " + Workers(step) + "\n" +
 			"Waiting for 1,000 items: " + Per1000Items(step) + "\n" +

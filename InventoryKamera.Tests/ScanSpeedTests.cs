@@ -72,18 +72,20 @@ namespace InventoryKamera.Tests
             Assert.AreEqual("= waits for each card", ScanSpeeds.HintText(a));
             Assert.AreEqual("Auto (waits for each card, up to 800 ms)", ScanSpeeds.LogText(a));
             Assert.AreEqual(3, ScanSpeeds.Workers(a));
-            Assert.AreEqual(1, ScanSpeeds.Factor(a), "menus and characters use the Normal waits");
+            Assert.AreEqual(1, ScanSpeeds.Factor(a), "menus use the Normal waits; character screens give up at them");
             Assert.AreEqual(
                 "Waits with Auto:\n" +
                 "after each item: until its card stops changing\n" +
                 "(checked every 15 ms, at most 800 ms)\n" +
-                "after switching character: 700 ms\n" +
+                "on the character screens: until each screen stops\n" +
+                "changing (at most the Normal waits)\n" +
                 "after opening a menu: 2 s\n" +
                 "OCR workers: 3\n" +
                 "Waiting for 1,000 items: depends on your PC\n" +
                 "\n" +
-                "Auto: waits only as long as each card needs, so it is\n" +
-                "fast and reliable, but it is new and needs a live check.",
+                "Auto: waits only as long as each card and character\n" +
+                "screen needs, so it is fast and reliable, but it is new and\n" +
+                "needs a live check.",
                 ScanSpeeds.TooltipText(a, forChoice: true));
         }
 

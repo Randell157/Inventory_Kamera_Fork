@@ -338,11 +338,15 @@ namespace InventoryKamera
 			}
 
 			SetCursor(xOffset, yOffset);
-			Click();
-			SystemWait(Speed.CharacterUI);
+			ScreenSettle.Run("open attributes", ScreenSettle.Area.Attributes, Click, BaseWait(Speed.CharacterUI), clickAgain: true);
 		}
 
-		public static void SelectCharacterConstellation()
+		/// <summary>
+		/// Opens the constellation screen. Returns false on Auto when it did not open ("Constellation" is
+		/// not the highlighted menu entry), so no nodes are clicked on the wrong screen and the scan is
+		/// still on the character screen.
+		/// </summary>
+		public static bool SelectCharacterConstellation()
 		{
 			int xOffset = (int)(170 / 1280.0 * GetWidth());
 			int yOffset = (int)(245 / 720.0 * GetHeight());
@@ -353,8 +357,19 @@ namespace InventoryKamera
 			}
 
 			SetCursor(xOffset, yOffset);
-			Click();
-			SystemWait(Speed.CharacterUI);
+			if (!AutoItemWait)
+			{
+				ScreenSettle.Run("open constellation", ScreenSettle.Area.ConstellationList, Click, BaseWait(Speed.CharacterUI));
+				return true;
+			}
+			// Comparing with "before" was fooled twice (Clorinde's loading panel, snowflakes over Ganyu's
+			// name bar, 2026-11-21), and the X button stays on the just-opened screen; the highlighted
+			// menu entry is either "Constellation" or not.
+			var menu = ScreenSettle.AreaRect(ScreenSettle.Area.CharacterMenu, new Size(GetWidth(), GetHeight()));
+			bool Opened() { using (Bitmap b = CaptureRegion(menu)) return ScreenSettle.ConstellationTabSelected(b); }
+			var clock = System.Diagnostics.Stopwatch.StartNew();
+			return ScreenSettle.ClickUntil("open constellation", Click, Opened, (int)(BaseWait(Speed.CharacterUI) * GetDelay()),
+				ms => Wait(ms), () => clock.ElapsedMilliseconds);
 		}
 
 		public static void SelectCharacterTalents()
@@ -368,8 +383,7 @@ namespace InventoryKamera
 			}
 
 			SetCursor(xOffset, yOffset);
-			Click();
-			SystemWait(Speed.CharacterUI);
+			ScreenSettle.Run("open talents", ScreenSettle.Area.TalentList, Click, BaseWait(Speed.CharacterUI), clickAgain: true);
 		}
 
 		public static void SelectNextCharacter()
@@ -383,8 +397,7 @@ namespace InventoryKamera
 			}
 
 			SetCursor(xOffset, yOffset);
-			Click();
-			SystemWait(Speed.SelectNextCharacter);
+			ScreenSettle.Run("next character", ScreenSettle.Area.Name, Click, BaseWait(Speed.SelectNextCharacter));
 		}
 
 		public static void CharacterScreen()
