@@ -172,7 +172,7 @@ namespace InventoryKamera
 
 				// Scan Talents
 				Navigation.SelectCharacterTalents();
-				character.Talents = ScanTalents(character);
+				character.Talents = ScanTalents(character, BoostedTalents(character, name));
 				Logger.Info("{0} Talents: {1}", character.NameGOOD, "{" + string.Join(", ", character.Talents.Select(kv => kv.Key + "=" + kv.Value).ToArray()) + "}");
 
 				// Scale down talents due to constellations
@@ -481,8 +481,67 @@ namespace InventoryKamera
 			return experience;
 		}
 
+		// How long to look for a readable, steady list before clicking instead.
+		private const int ListReadMs = 1500;
+
+		/// <summary>
+		/// The constellation level from the six node rings on the just-opened constellation screen, or
+		/// null (then the nodes are clicked). The same reading twice in a row is needed, so a list that is
+		/// still fading in isn't read.
+		/// </summary>
+		private static int? ReadConstellationFromList(Character character)
+		{
+			var size = new Size(Navigation.GetWidth(), Navigation.GetHeight());
+			if (!CharacterLists.Supported(size)) return null;
+			var rect = CharacterLists.NodeListArea(size);
+			var clock = Stopwatch.StartNew();
+			int? previous = null;
+			CharacterLists.NodeState[] nodes = null;
+			while (clock.ElapsedMilliseconds < ListReadMs)
+			{
+				int? now;
+				using (Bitmap list = Navigation.CaptureRegion(rect))
+				{
+					nodes = CharacterLists.ReadNodes(list);
+					now = CharacterLists.Constellation(nodes);
+				}
+				if (now != null && now == previous) return now;
+				previous = now;
+				Navigation.Wait(ScreenSettle.PollMs);
+			}
+			Logger.Debug("{0}: constellation node list unclear ({1}); clicking the nodes", character.NameGOOD,
+				nodes == null ? "not read" : string.Join(" ", nodes));
+			SaveScreenshot(character, "constellation-list-unclear");
+			return null;
+		}
+
+		private static void SaveScreenshot(Character character, string name)
+		{
+			using (var screen = Navigation.CaptureWindow())
+				SaveImage(character, name, screen);
+		}
+
+		private static void SaveImage(Character character, string name, Bitmap image)
+		{
+			try
+			{
+				Directory.CreateDirectory($"./logging/characters/{character.NameGOOD}");
+				image.Save($"./logging/characters/{character.NameGOOD}/{name}.png");
+			}
+			catch (Exception e) { Logger.Debug("Couldn't save the screenshot {0}: {1}", name, e.Message); }
+		}
+
 		private static int ScanConstellations(Character character)
 		{
+			int? listed = ReadConstellationFromList(character);
+			if (listed != null)
+			{
+				if (Properties.Settings.Default.LogScreenshots) SaveScreenshot(character, "constellation_list");
+				Logger.Debug("{0}: constellation {1} read from the node list", character.NameGOOD, listed.Value);
+				UserInterface.SetCharacter_Constellation(listed.Value);
+				return listed.Value;   // no node was clicked, so no Esc: the menu is still there for Talents
+			}
+
 			double yReference = 720.0;
 			int constellation;
 
@@ -536,7 +595,24 @@ namespace InventoryKamera
 			return constellation;
 		}
 
-		private static Dictionary<string, int> ScanTalents(Character character)
+		/// <summary>The talents raised by 3 on screen by C3 and C5 ("skill", "burst"); empty below C3 or if unknown.</summary>
+		private static HashSet<string> BoostedTalents(Character character, string name)
+		{
+			var boosted = new HashSet<string>();
+			try
+			{
+				if (character.Constellation < 3 || !GenshinProcesor.Characters.ContainsKey(name.ToLower())) return boosted;
+				var order = character.NameGOOD.Contains("Traveler")
+					? GenshinProcesor.Characters[name.ToLower()]["ConstellationOrder"][character.Element.ToLower()]
+					: GenshinProcesor.Characters[name.ToLower()]["ConstellationOrder"];
+				boosted.Add((string)order[0]);
+				if (character.Constellation >= 5) boosted.Add((string)order[1]);
+			}
+			catch (Exception e) { Logger.Debug("{0}: boosted talents unknown: {1}", character.NameGOOD, e.Message); }
+			return boosted;
+		}
+
+		private static Dictionary<string, int> ScanTalents(Character character, HashSet<string> boosted)
 		{
 			var talents = new Dictionary<string, int>
 			{
@@ -562,9 +638,21 @@ namespace InventoryKamera
 				width:	(int)((Navigation.IsNormal ? 0.2913 : 0.2913) * Navigation.GetWidth() ),
 				height:	(int)((Navigation.IsNormal ? 0.0711 : 0.0711) * Navigation.GetHeight() ));
 
+			// First read the levels from the list on the right; only talents that can't be read are clicked.
+			var listed = ReadTalentsFromList(character, specialOffset, boosted);
+			bool clicked = false;
+
 			for (int i = 0; i < 3; i++)
 			{
 				string talent;
+				string key = i == 0 ? "auto" : i == 1 ? "skill" : "burst";
+				if (listed[i] != null)
+				{
+					talents[key] = listed[i].Value;
+					UserInterface.SetCharacter_Talent(listedCrops[i], listed[i].Value.ToString(), i);
+					continue;
+				}
+				clicked = true;
 				// Change y-offset for talent clicking
 				int yOffset = (int)( 110 / yRef * Navigation.GetHeight() ) + ( i + ( ( i == 2 ) ? specialOffset : 0 ) ) * (int)(60 / yRef * Navigation.GetHeight() );
 
@@ -610,9 +698,66 @@ namespace InventoryKamera
 				}
 			}
 
-			ScreenSettle.Run("close talents", ScreenSettle.Area.TalentDetail,
-				() => Navigation.sim.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.ESCAPE), Navigation.BaseWait(Navigation.Speed.Normal));
+			// Only a clicked talent opens its detail; read from the list, the Talents list is still showing.
+			if (clicked)
+				ScreenSettle.Run("close talents", ScreenSettle.Area.TalentDetail,
+					() => Navigation.sim.Keyboard.KeyPress(WindowsInput.Native.VirtualKeyCode.ESCAPE), Navigation.BaseWait(Navigation.Speed.Normal));
+			for (int i = 0; i < 3; i++) { listedCrops[i]?.Dispose(); listedCrops[i] = null; }
 			return talents;
+		}
+
+		// The entry crops shown in the window for talents read from the list.
+		private static readonly Bitmap[] listedCrops = new Bitmap[3];
+
+		/// <summary>
+		/// Normal Attack, Skill and Burst levels read from the Talents list (null where unreadable).
+		/// The list must hold still for two captures before it is read, so a list still fading in isn't.
+		/// </summary>
+		private static int?[] ReadTalentsFromList(Character character, int specialOffset, HashSet<string> boosted)
+		{
+			var levels = new int?[3];
+			for (int i = 0; i < 3; i++) { listedCrops[i]?.Dispose(); listedCrops[i] = null; }
+			var size = new Size(Navigation.GetWidth(), Navigation.GetHeight());
+			if (!CharacterLists.Supported(size)) return levels;
+			var rect = CharacterLists.TalentListArea(size);
+			var whole = new[] { new Rectangle(Point.Empty, rect.Size) };
+			var clock = Stopwatch.StartNew();
+			while (clock.ElapsedMilliseconds < ListReadMs && levels.Any(l => l == null))
+			{
+				using (Bitmap a = Navigation.CaptureRegion(rect))
+				{
+					Navigation.Wait(ScreenSettle.PollMs);
+					using (Bitmap b = Navigation.CaptureRegion(rect))
+					{
+						if (!CardSettle.Matches(a, b, whole)) continue;   // still changing
+						SaveImage(character, "talent_list", b);   // always, so a wrong read can be checked afterwards
+						for (int i = 0; i < 3; i++)
+						{
+							if (levels[i] != null) continue;
+							int entry = i == 2 ? 2 + specialOffset : i;   // Mona and Ayaka: the sprint comes before the burst
+							levels[i] = CharacterLists.ReadTalentLevel(b, entry);
+							string key = i == 0 ? "auto" : i == 1 ? "skill" : "burst";
+							if (levels[i] < 4 && boosted.Contains(key))
+							{
+								// A C3/C5 boosted talent shows at least 4: a misread (Rosaria's 11 as 1), so click it
+								Logger.Debug("{0}: boosted {1} read as {2}; not trusted", character.NameGOOD, key, levels[i]);
+								levels[i] = null;
+								continue;
+							}
+							if (levels[i] != null)
+								listedCrops[i] = b.Clone(CharacterLists.TalentEntry(entry, b.Size), b.PixelFormat);
+						}
+					}
+				}
+			}
+			if (levels.Any(l => l == null))
+			{
+				Logger.Debug("{0}: talent list unclear ({1}); clicking those talents", character.NameGOOD,
+					string.Join(", ", levels.Select(l => l?.ToString() ?? "?")));
+				SaveScreenshot(character, "talent-list-unclear");
+			}
+			else Logger.Debug("{0}: talents read from the list", character.NameGOOD);
+			return levels;
 		}
 	}
 }
