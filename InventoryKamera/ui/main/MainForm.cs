@@ -194,8 +194,31 @@ namespace InventoryKamera
             
         }
 
+        // Key codes 0-6 are "none" and the mouse buttons, which the key boxes can't record. Older
+        // settings stored the slot 1 key as 1 (the left mouse button) by mistake, so the scan never
+        // switched to party slot 1. Replace such values with the default key.
+        internal static int KeyOrDefault(int stored, Keys fallback) => stored > 6 ? stored : (int)fallback;
+
+        private void RepairKeySettings()
+        {
+            var settings = Properties.Settings.Default;
+            int inventory = KeyOrDefault(settings.InventoryKey, Keys.B);
+            int character = KeyOrDefault(settings.CharacterKey, Keys.C);
+            int slot1 = KeyOrDefault(settings.Slot1Key, Keys.D1);
+
+            if (inventory == settings.InventoryKey && character == settings.CharacterKey && slot1 == settings.Slot1Key) return;
+
+            Logger.Info("Repaired key settings (inventory {0}->{1}, character {2}->{3}, slot 1 {4}->{5})",
+                settings.InventoryKey, inventory, settings.CharacterKey, character, settings.Slot1Key, slot1);
+            settings.InventoryKey = inventory;
+            settings.CharacterKey = character;
+            settings.Slot1Key = slot1;
+            settings.Save();
+        }
+
         private void UpdateKeyTextBoxes()
-        { 
+        {
+            RepairKeySettings();
             Navigation.inventoryKey = (VirtualKeyCode)Properties.Settings.Default.InventoryKey;
             Navigation.characterKey = (VirtualKeyCode)Properties.Settings.Default.CharacterKey;
             Navigation.slotOneKey = (VirtualKeyCode)Properties.Settings.Default.Slot1Key;

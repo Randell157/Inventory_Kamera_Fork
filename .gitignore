@@ -365,3 +365,6 @@ MigrationBackup/
 FodyWeavers.xsd
 
 /InventoryKameraWPF/
+
+# Local UI mockups (not part of the app)
+.mockups/

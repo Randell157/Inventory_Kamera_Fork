@@ -234,12 +234,19 @@ namespace InventoryKamera
 			}
 		}
 
-		public static void SetProgramStatus(string status, bool ok = true)
+		// Amber for a step that prepares the scan, so it reads differently from "Scanning".
+		// Dark enough to keep 4.5:1 contrast on the window's gray background.
+		public static readonly Color PreparingColor = Color.FromArgb(146, 64, 14);
+
+		public static void SetProgramStatus(string status, bool ok = true) =>
+			SetProgramStatus(status, ok ? Color.Green : Color.Red);
+
+		public static void SetProgramStatus(string status, Color color)
 		{
 			MethodInvoker statusAction = delegate
 			{
 				programStatus_Label.Text = status;
-				programStatus_Label.ForeColor = ok ? Color.Green : Color.Red;
+				programStatus_Label.ForeColor = color;
 				programStatus_Label.Font = new Font(programStatus_Label.Font.FontFamily, 15);
 				programStatus_Label.Refresh();
 			};

@@ -71,21 +71,75 @@ namespace InventoryKamera
 
 		public void ResetLogging()
 		{
-			try
-			{
-				Directory.Delete("./logging/weapons", true);
-				Directory.Delete("./logging/artifacts", true);
-				Directory.Delete("./logging/characters", true);
-				Directory.Delete("./logging/materials", true);
-			}
-			catch { }
-
-			Directory.CreateDirectory("./logging/weapons");
-			Directory.CreateDirectory("./logging/artifacts");
-			Directory.CreateDirectory("./logging/characters");
-			Directory.CreateDirectory("./logging/materials");
-
+			// Name the step while it runs: it's usually milliseconds, but it once took 25 s,
+			// and "Scanning" with nothing happening in the game looked like the app was stuck.
+			UserInterface.SetProgramStatus("Clearing files…", UserInterface.PreparingColor);
+			ResetLoggingFolders("./logging");
 			Logger.Info("Logging directory reset");
+			UserInterface.SetProgramStatus("Scanning");
+		}
+
+		private static readonly string[] ScreenshotFolders = { "weapons", "artifacts", "characters", "materials" };
+
+		// Empties the previous scan's screenshot folders without making the scan wait. A full scan
+		// leaves 20,000+ files, and deleting them took long enough that the scan looked stuck.
+		// Each folder is renamed aside (instant) and deleted in the background; folders left
+		// from an earlier run are deleted too. Even counting the old files took seconds, so that
+		// happens in the background as well. Returns the background deletion, which callers
+		// don't need to wait for; its result is the number of old files it found.
+		internal static Task<int> ResetLoggingFolders(string root)
+		{
+			var watch = System.Diagnostics.Stopwatch.StartNew();
+			Directory.CreateDirectory(root);
+
+			foreach (string name in ScreenshotFolders)
+			{
+				string folder = Path.Combine(root, name);
+				if (Directory.Exists(folder))
+				{
+					try
+					{
+						Directory.Move(folder, Path.Combine(root, $"old-{name}-{Guid.NewGuid():N}"));
+					}
+					catch (Exception ex)
+					{
+						// A file held open elsewhere can block the rename. Delete what can be deleted,
+						// so this folder starts as empty as possible and the other folders still reset.
+						Logger.Warn("Could not move {0} aside ({1}); deleting its files instead", folder, ex.Message);
+						DeleteContents(folder);
+					}
+				}
+				Directory.CreateDirectory(folder);
+			}
+
+			string[] old = Directory.GetDirectories(root, "old-*");
+			Logger.Info("Previous screenshots moved aside in {0} ms; deleting them in the background", watch.ElapsedMilliseconds);
+
+			return Task.Run(() =>
+			{
+				int oldFiles = 0;
+				foreach (string folder in old)
+				{
+					try { oldFiles += Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories).Count(); }
+					catch (Exception) { }
+					try { Directory.Delete(folder, true); }
+					catch (Exception ex) { Logger.Debug("Old screenshots in {0} not fully deleted: {1}", folder, ex.Message); }
+				}
+				Logger.Info("Cleared previous screenshots ({0} files)", oldFiles);
+				return oldFiles;
+			});
+		}
+
+		private static void DeleteContents(string folder)
+		{
+			foreach (string file in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories).ToList())
+			{
+				try { File.Delete(file); } catch (Exception) { }
+			}
+			foreach (string dir in Directory.EnumerateDirectories(folder, "*", SearchOption.AllDirectories).OrderByDescending(d => d.Length).ToList())
+			{
+				try { Directory.Delete(dir, false); } catch (Exception) { }
+			}
 		}
 
 		public void StopImageProcessorWorkers()
@@ -272,6 +326,7 @@ namespace InventoryKamera
 			if (Properties.Settings.Default.ScanCharacters)
 			{
 				Logger.Info("Scanning characters...");
+				Logger.Info("Switching to party slot 1 (slot 1 key: {0})", Navigation.slotOneKey);
 				// Get characters
 				Navigation.CharacterScreen();
 				try

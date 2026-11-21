@@ -291,7 +291,7 @@ namespace InventoryKamera.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        [global::System.Configuration.DefaultSettingValueAttribute("49")]
         public int Slot1Key {
             get {
                 return ((int)(this["Slot1Key"]));

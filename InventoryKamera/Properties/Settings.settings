@@ -73,7 +73,7 @@
 &lt;/ArrayOfString&gt;</Value>
     </Setting>
     <Setting Name="Slot1Key" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">1</Value>
+      <Value Profile="(Default)">49</Value>
     </Setting>
     <Setting Name="SortByObtained" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
