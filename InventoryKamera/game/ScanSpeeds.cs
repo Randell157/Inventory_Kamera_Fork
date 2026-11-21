@@ -60,6 +60,21 @@ namespace InventoryKamera
 		internal static string ItemText(int step) =>
 			IsAuto(step) ? "Auto (recommended)" : Names[Valid(step)] + " – " + Wait(step, Navigation.Speed.SelectNextInventoryItem);
 
+		// The scan speed control chosen under Options → Scan Speed Control (setting "ScanSpeedControl").
+		internal const int DropDown = 0, Slider = 1;
+		internal static bool IsSlider(int control) => control == Slider;   // anything else shows the drop-down
+
+		// The slider has one step per drop-down choice, in the same order (Auto, Fastest … Slowest),
+		// so a slider position is a drop-down position.
+		internal static int SliderMax => ChoiceCount - 1;
+
+		// "Speed: Auto (recommended)" or "Speed: Fast – 150 ms": the slider's heading, naming the step.
+		internal static string SliderHeading(int step) =>
+			"Speed: " + (IsAuto(Valid(step)) ? "Auto (recommended)" : ItemText(step));
+
+		internal static string SliderStartLabel => Name(StepAt(0));
+		internal static string SliderEndLabel => Name(StepAt(SliderMax));
+
 		internal static string HintText(int step) =>
 			IsAuto(step) ? "= waits for each card" : "= " + Workers(step) + " OCR workers";
 

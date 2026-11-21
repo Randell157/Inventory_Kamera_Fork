@@ -136,6 +136,38 @@ namespace InventoryKamera.Tests
         }
 
         [TestMethod]
+        public void SliderHeadingNamesEveryStep()
+        {
+            string[] expected = { "Speed: Auto (recommended)", "Speed: Fastest – 100 ms", "Speed: Fast – 150 ms",
+                "Speed: Normal – 200 ms", "Speed: Slow – 250 ms", "Speed: Slowest – 300 ms" };
+            Assert.AreEqual(expected.Length - 1, ScanSpeeds.SliderMax, "one slider step per drop-down choice");
+            for (int position = 0; position <= ScanSpeeds.SliderMax; position++)
+                Assert.AreEqual(expected[position], ScanSpeeds.SliderHeading(ScanSpeeds.StepAt(position)));
+            Assert.AreEqual("Auto", ScanSpeeds.SliderStartLabel);
+            Assert.AreEqual("Slowest", ScanSpeeds.SliderEndLabel);
+        }
+
+        [TestMethod]
+        public void SliderAndDropDownMeanTheSameSpeed()
+        {
+            // A slider position is a drop-down position, both ways, for every saved speed.
+            for (int position = 0; position <= ScanSpeeds.SliderMax; position++)
+                Assert.AreEqual(position, ScanSpeeds.ChoiceOf(ScanSpeeds.StepAt(position)));
+            Assert.AreEqual(ScanSpeeds.Auto, ScanSpeeds.StepAt(0), "Auto is the first step");
+            Assert.AreEqual(4, ScanSpeeds.StepAt(ScanSpeeds.SliderMax), "Slowest is the last step");
+        }
+
+        [TestMethod]
+        public void DropDownIsTheDefaultControl()
+        {
+            var defaults = new Properties.Settings();
+            Assert.AreEqual(ScanSpeeds.DropDown.ToString(), defaults.Properties["ScanSpeedControl"].DefaultValue?.ToString());
+            Assert.IsFalse(ScanSpeeds.IsSlider(ScanSpeeds.DropDown));
+            Assert.IsTrue(ScanSpeeds.IsSlider(ScanSpeeds.Slider));
+            Assert.IsFalse(ScanSpeeds.IsSlider(7), "an unknown value shows the drop-down");
+        }
+
+        [TestMethod]
         public void WaitTableIsUnchanged()
         {
             Assert.AreEqual(200, Navigation.BaseWait(Navigation.Speed.SelectNextInventoryItem));

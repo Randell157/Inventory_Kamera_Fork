@@ -543,7 +543,13 @@ namespace InventoryKamera
             scanChoiceToolTip = new ToolTip(components);
             ScanSpeed_ComboBox.Items.Clear();
             for (int i = 0; i < ScanSpeeds.ChoiceCount; i++) ScanSpeed_ComboBox.Items.Add(ScanSpeeds.ItemText(ScanSpeeds.StepAt(i)));
-            ScanSpeed_ComboBox.SelectedIndex = ScanSpeeds.ChoiceOf(step);   // raises SelectedIndexChanged, which fills the hint and tooltip
+            // The slider has one step per drop-down choice, in the same order (Auto, Fastest … Slowest).
+            ScanSpeed_TrackBar.Maximum = ScanSpeeds.SliderMax;
+            ScanSpeedStart_Label.Text = ScanSpeeds.SliderStartLabel;
+            ScanSpeedEnd_Label.Text = ScanSpeeds.SliderEndLabel;
+            ScanSpeedEnd_Label.Left = ScanSpeed_TrackBar.Right - 6 - ScanSpeedEnd_Label.PreferredWidth;
+            ScanSpeed_ComboBox.SelectedIndex = ScanSpeeds.ChoiceOf(step);   // raises SelectedIndexChanged, which fills the hint, slider and tooltip
+            ShowScanSpeedControl(settings.ScanSpeedControl);
         }
 
         private void ScanSpeed_ComboBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -551,11 +557,46 @@ namespace InventoryKamera
             if (ScanSpeed_ComboBox.SelectedIndex < 0) return;
             int step = ScanSpeeds.StepAt(ScanSpeed_ComboBox.SelectedIndex);
             Properties.Settings.Default.ScanSpeed = step;
+            if (ScanSpeed_TrackBar.Value != ScanSpeed_ComboBox.SelectedIndex) ScanSpeed_TrackBar.Value = ScanSpeed_ComboBox.SelectedIndex;
             ScanSpeedHint_Label.Text = ScanSpeeds.HintText(step);
+            UpdateScanSpeedHeading();
             string tip = ScanSpeeds.TooltipText(step);
-            scanSpeedToolTip.SetToolTip(ScanSpeed_ComboBox, tip);
-            scanSpeedToolTip.SetToolTip(ScannerDelay_Label, tip);
-            scanSpeedToolTip.SetToolTip(ScanSpeedHint_Label, tip);
+            foreach (Control c in new Control[] { ScanSpeed_ComboBox, ScannerDelay_Label, ScanSpeedHint_Label, ScanSpeed_TrackBar, ScanSpeedStart_Label, ScanSpeedEnd_Label })
+                scanSpeedToolTip.SetToolTip(c, tip);
+        }
+
+        // Dragging the slider, or clicking beside the knob (one step: LargeChange is 1), picks the same
+        // choice in the drop-down, which saves it.
+        private void ScanSpeed_TrackBar_Scroll(object sender, EventArgs e)
+        {
+            if (ScanSpeed_ComboBox.SelectedIndex != ScanSpeed_TrackBar.Value) ScanSpeed_ComboBox.SelectedIndex = ScanSpeed_TrackBar.Value;
+        }
+
+        // Options → Scan Speed Control → Drop-down / Slider. Both change the same saved speed.
+        private void ScanSpeedControlMenuItem_Click(object sender, EventArgs e)
+        {
+            int control = sender == scanSpeedSliderMenuItem ? ScanSpeeds.Slider : ScanSpeeds.DropDown;
+            Properties.Settings.Default.ScanSpeedControl = control;
+            Properties.Settings.Default.Save();
+            ShowScanSpeedControl(control);
+        }
+
+        private void ShowScanSpeedControl(int control)
+        {
+            bool slider = ScanSpeeds.IsSlider(control);
+            ScanSpeed_ComboBox.Visible = ScanSpeedHint_Label.Visible = !slider;
+            ScanSpeed_TrackBar.Visible = ScanSpeedStart_Label.Visible = ScanSpeedEnd_Label.Visible = slider;
+            scanSpeedDropDownMenuItem.Checked = !slider;
+            scanSpeedSliderMenuItem.Checked = slider;
+            UpdateScanSpeedHeading();
+        }
+
+        // The drop-down names each choice itself; above the slider the heading names the step.
+        private void UpdateScanSpeedHeading()
+        {
+            ScannerDelay_Label.Text = ScanSpeed_TrackBar.Visible && ScanSpeed_ComboBox.SelectedIndex >= 0
+                ? ScanSpeeds.SliderHeading(ScanSpeeds.StepAt(ScanSpeed_ComboBox.SelectedIndex))
+                : "Delay per item";
         }
 
         // Drawn by the form (DrawMode.OwnerDrawFixed) only so it can tell which choice is under the pointer:

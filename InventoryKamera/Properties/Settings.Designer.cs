@@ -82,6 +82,18 @@ namespace InventoryKamera.Properties {
                 this["ScanSpeed"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int ScanSpeedControl {
+            get {
+                return ((int)(this["ScanSpeedControl"]));
+            }
+            set {
+                this["ScanSpeedControl"] = value;
+            }
+        }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]

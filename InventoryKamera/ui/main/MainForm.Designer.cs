@@ -116,6 +116,14 @@
             this.Artifacts_Checkbox = new System.Windows.Forms.CheckBox();
             this.Weapons_CheckBox = new System.Windows.Forms.CheckBox();
             this.ScanSpeed_ComboBox = new System.Windows.Forms.ComboBox();
+            this.ScanSpeed_TrackBar = new System.Windows.Forms.TrackBar();
+            this.ScanSpeedStart_Label = new System.Windows.Forms.Label();
+            this.ScanSpeedEnd_Label = new System.Windows.Forms.Label();
+            this.scanSpeedMenuSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.scanSpeedControlMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.scanSpeedDropDownMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.scanSpeedSliderMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            ((System.ComponentModel.ISupportInitialize)(this.ScanSpeed_TrackBar)).BeginInit();
             this.ZeroMeansAllTooltips = new System.Windows.Forms.ToolTip(this.components);
             this.label6 = new System.Windows.Forms.Label();
             this.label7 = new System.Windows.Forms.Label();
@@ -657,7 +665,9 @@
             this.characterSlot1KeyToolStripMenuItem,
             this.DatabaseUpdateMenuItem,
             this.toolStripMenuItem1,
-            this.updateExecutablesToolStripMenuItem});
+            this.updateExecutablesToolStripMenuItem,
+            this.scanSpeedMenuSeparator,
+            this.scanSpeedControlMenuItem});
             this.keysToolStripMenuItem.Name = "keysToolStripMenuItem";
             this.keysToolStripMenuItem.Size = new System.Drawing.Size(61, 20);
             this.keysToolStripMenuItem.Text = "Options";
@@ -742,6 +752,34 @@
             this.updateExecutablesToolStripMenuItem.Size = new System.Drawing.Size(190, 22);
             this.updateExecutablesToolStripMenuItem.Text = "Update Executables";
             this.updateExecutablesToolStripMenuItem.Click += new System.EventHandler(this.updateExecutablesToolStripMenuItem_Click);
+            //
+            // scanSpeedMenuSeparator
+            //
+            this.scanSpeedMenuSeparator.Name = "scanSpeedMenuSeparator";
+            this.scanSpeedMenuSeparator.Size = new System.Drawing.Size(187, 6);
+            //
+            // scanSpeedControlMenuItem
+            //
+            this.scanSpeedControlMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.scanSpeedDropDownMenuItem,
+            this.scanSpeedSliderMenuItem});
+            this.scanSpeedControlMenuItem.Name = "scanSpeedControlMenuItem";
+            this.scanSpeedControlMenuItem.Size = new System.Drawing.Size(190, 22);
+            this.scanSpeedControlMenuItem.Text = "Scan Speed Control";
+            //
+            // scanSpeedDropDownMenuItem
+            //
+            this.scanSpeedDropDownMenuItem.Name = "scanSpeedDropDownMenuItem";
+            this.scanSpeedDropDownMenuItem.Size = new System.Drawing.Size(130, 22);
+            this.scanSpeedDropDownMenuItem.Text = "Drop-down";
+            this.scanSpeedDropDownMenuItem.Click += new System.EventHandler(this.ScanSpeedControlMenuItem_Click);
+            //
+            // scanSpeedSliderMenuItem
+            //
+            this.scanSpeedSliderMenuItem.Name = "scanSpeedSliderMenuItem";
+            this.scanSpeedSliderMenuItem.Size = new System.Drawing.Size(130, 22);
+            this.scanSpeedSliderMenuItem.Text = "Slider";
+            this.scanSpeedSliderMenuItem.Click += new System.EventHandler(this.ScanSpeedControlMenuItem_Click);
             // 
             // label2
             // 
@@ -1088,6 +1126,39 @@
             this.ScanSpeed_ComboBox.DrawItem += new System.Windows.Forms.DrawItemEventHandler(this.ScanSpeed_ComboBox_DrawItem);
             this.ScanSpeed_ComboBox.SelectedIndexChanged += new System.EventHandler(this.ScanSpeed_ComboBox_SelectedIndexChanged);
             this.ScanSpeed_ComboBox.DropDownClosed += new System.EventHandler(this.ScanSpeed_ComboBox_DropDownClosed);
+            //
+            // ScanSpeed_TrackBar
+            //
+            this.ScanSpeed_TrackBar.AutoSize = false;
+            this.ScanSpeed_TrackBar.LargeChange = 1;
+            this.ScanSpeed_TrackBar.Location = new System.Drawing.Point(4, 272);
+            this.ScanSpeed_TrackBar.Margin = new System.Windows.Forms.Padding(2);
+            this.ScanSpeed_TrackBar.Maximum = 5;
+            this.ScanSpeed_TrackBar.Name = "ScanSpeed_TrackBar";
+            this.ScanSpeed_TrackBar.Size = new System.Drawing.Size(141, 28);
+            this.ScanSpeed_TrackBar.TabIndex = 68;
+            this.ScanSpeed_TrackBar.Visible = false;
+            this.ScanSpeed_TrackBar.Scroll += new System.EventHandler(this.ScanSpeed_TrackBar_Scroll);
+            //
+            // ScanSpeedStart_Label
+            //
+            this.ScanSpeedStart_Label.AutoSize = true;
+            this.ScanSpeedStart_Label.Font = new System.Drawing.Font("Microsoft Sans Serif", 6F);
+            this.ScanSpeedStart_Label.Location = new System.Drawing.Point(10, 300);
+            this.ScanSpeedStart_Label.Name = "ScanSpeedStart_Label";
+            this.ScanSpeedStart_Label.TabIndex = 75;
+            this.ScanSpeedStart_Label.Text = "Auto";
+            this.ScanSpeedStart_Label.Visible = false;
+            //
+            // ScanSpeedEnd_Label
+            //
+            this.ScanSpeedEnd_Label.AutoSize = true;
+            this.ScanSpeedEnd_Label.Font = new System.Drawing.Font("Microsoft Sans Serif", 6F);
+            this.ScanSpeedEnd_Label.Location = new System.Drawing.Point(110, 300);
+            this.ScanSpeedEnd_Label.Name = "ScanSpeedEnd_Label";
+            this.ScanSpeedEnd_Label.TabIndex = 76;
+            this.ScanSpeedEnd_Label.Text = "Slowest";
+            this.ScanSpeedEnd_Label.Visible = false;
             // 
             // label6
             // 
@@ -1169,6 +1240,9 @@
             this.Controls.Add(this.ScanItemsList_Label);
             this.Controls.Add(this.ScannerDelay_Label);
             this.Controls.Add(this.ScanSpeed_ComboBox);
+            this.Controls.Add(this.ScanSpeed_TrackBar);
+            this.Controls.Add(this.ScanSpeedStart_Label);
+            this.Controls.Add(this.ScanSpeedEnd_Label);
             this.Controls.Add(this.ScannerOutput_Panel);
             this.Controls.Add(this.Navigation_Label);
             this.Controls.Add(this.Navigation_Image);
@@ -1216,6 +1290,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.MinimumWeaponLevelControl)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.ArtifactRarityControl)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.WeaponRarityControl)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.ScanSpeed_TrackBar)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -1258,6 +1333,13 @@
         private System.Windows.Forms.Label Navigation_Label;
         private System.Windows.Forms.Panel ScannerOutput_Panel;
         private System.Windows.Forms.ComboBox ScanSpeed_ComboBox;
+        private System.Windows.Forms.TrackBar ScanSpeed_TrackBar;
+        private System.Windows.Forms.Label ScanSpeedStart_Label;
+        private System.Windows.Forms.Label ScanSpeedEnd_Label;
+        private System.Windows.Forms.ToolStripSeparator scanSpeedMenuSeparator;
+        private System.Windows.Forms.ToolStripMenuItem scanSpeedControlMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem scanSpeedDropDownMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem scanSpeedSliderMenuItem;
         private System.Windows.Forms.Label ScannerDelay_Label;
         private System.Windows.Forms.CheckBox Weapons_CheckBox;
         private System.Windows.Forms.Label ScanItemsList_Label;
