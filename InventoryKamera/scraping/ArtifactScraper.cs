@@ -323,10 +323,8 @@ namespace InventoryKamera
 				// Get Rarity
 				rarity = GetRarity(bm[a_name]);
 
-				// Check for equipped color
-				Color equippedColor = Color.FromArgb(255, 255, 231, 187);
-				Color equippedStatus = bm[a_equippedCharacter].GetPixel(5, 5);
-				bool b_equipped = GenshinProcesor.CompareColors(equippedColor, equippedStatus);
+				// Check for the equipped bar's colour
+				bool b_equipped = LooksEquipped(bm[a_equippedCharacter]);
 
 				// The red padlock, not the box behind it: the box may still be fading from the
 				// previous artifact's unlocked look (79 of 2,181 were misread that way).
@@ -339,7 +337,7 @@ namespace InventoryKamera
 				var taskMain  = taskGear.ContinueWith( (antecedent) => mainStat = ScanArtifactMainStat(bm[a_mainStat], antecedent.Result));
 				var taskLevel = Task.Run(() => level = ScanArtifactLevel(bm[a_level]));
 				var taskSubs  = Task.Run(() => (subStats, unactivatedSubStats) = ScanArtifactSubStats(bm[a_subStats]));
-				var taskEquip = Task.Run(() => equippedCharacter = ScanArtifactEquippedCharacter(bm[a_equippedCharacter]));
+				var taskEquip = ReadIfEquipped(b_equipped, () => ScanArtifactEquippedCharacter(bm[a_equippedCharacter]));
 				var taskName = Task.Run(() => setName = ScanArtifactSet(bm[a_name]));
 
 				tasks.Add(taskGear);
@@ -347,12 +345,10 @@ namespace InventoryKamera
 				tasks.Add(taskLevel);
 				tasks.Add(taskSubs);
 				tasks.Add(taskName);
-				if (b_equipped)
-				{
-					tasks.Add(taskEquip);
-				}
+				tasks.Add(taskEquip);
 
 				await Task.WhenAll(tasks.ToArray());
+				equippedCharacter = taskEquip.Result;
 			}
 			return new Artifact(setName, rarity, level, gearSlot, mainStat, subStats, unactivatedSubStats, equippedCharacter, id, _lock);
 		}

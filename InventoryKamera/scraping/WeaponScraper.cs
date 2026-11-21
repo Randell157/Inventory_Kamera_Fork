@@ -245,10 +245,8 @@ namespace InventoryKamera
 				// Check for Rarity
 				rarity = GetQuality(bm[w_name]);
 
-				// Check for equipped color
-				Color equippedColor = Color.FromArgb(255, 255, 231, 187);
-				Color equippedStatus = bm[w_equippedCharacter].GetPixel(5, 5);
-				bool b_equipped = GenshinProcesor.CompareColors(equippedColor, equippedStatus);
+				// Check for the equipped bar's colour
+				bool b_equipped = LooksEquipped(bm[w_equippedCharacter]);
 
 				// Check for lock color
 				locked = IsLockIconRed(bm[w_lock]);
@@ -261,18 +259,15 @@ namespace InventoryKamera
 				});
 				var taskLevel = Task.Run(() => level = ScanLevel(bm[w_level], ref ascended));
 				var taskRefinement = Task.Run(() => refinementLevel = ScanRefinement(bm[w_refinement]));
-				var taskEquipped = Task.Run(() => equippedCharacter = ScanEquippedCharacter(bm[w_equippedCharacter]));
+				var taskEquipped = ReadIfEquipped(b_equipped, () => ScanEquippedCharacter(bm[w_equippedCharacter]));
 
 				tasks.Add(taskName);
 				tasks.Add(taskLevel);
 				tasks.Add(taskRefinement);
-
-				if (b_equipped)
-				{
-					tasks.Add(taskEquipped);
-				}
+				tasks.Add(taskEquipped);
 
 				await Task.WhenAll(tasks.ToArray());
+				equippedCharacter = taskEquipped.Result;
 			}
 			return new Weapon(name, level, ascended, refinementLevel, locked, equippedCharacter, id, rarity);
 		}
