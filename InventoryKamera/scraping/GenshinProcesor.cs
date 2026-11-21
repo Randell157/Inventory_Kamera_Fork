@@ -369,6 +369,15 @@ namespace InventoryKamera
 			}
 			var n = FindClosestInDict(source: name, targets: temp, minConfidence: minConfidence);
 
+			// The name area can cut off a long name's last letter, and OCR then misreads the
+			// half-visible letter (Kaedehara Kazuh -> "kaedeharakazul"). Try once without it. A
+			// shortened name still has to fit exactly one character (or pass the fuzzy match).
+			if (string.IsNullOrWhiteSpace(n) && name != null && name.Length > 4)
+			{
+				n = FindClosestInDict(source: name.Substring(0, name.Length - 1), targets: temp, minConfidence: minConfidence);
+				if (!string.IsNullOrWhiteSpace(n)) Logger.Debug("Matched {0} as {1} without its last letter (likely cut off)", name, n);
+			}
+
             return n;
 		}
 

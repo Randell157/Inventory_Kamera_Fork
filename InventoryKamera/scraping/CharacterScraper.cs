@@ -256,35 +256,7 @@ namespace InventoryKamera
 				Navigation.SystemWait(Navigation.Speed.Fast);
 				using (Bitmap bm = Navigation.CaptureRegion(region))
 				{
-					Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
-					GenshinProcesor.SetThreshold(110, ref n);
-					GenshinProcesor.SetInvert(ref n);
-
-					n = GenshinProcesor.ResizeImage(n, n.Width * 2, n.Height * 2);
-					string block = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.Auto).ToLower().Trim();
-					string line = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.SingleLine).ToLower().Trim();
-
-					// Characters with wrapped names will not have a slash
-					string nameAndElement = line.Contains("/") ? line : block;
-
-					if (nameAndElement.Contains("/"))
-					{
-						var split = nameAndElement.Split('/');
-
-						// Search for element and character name in block
-
-						// Long name characters might look like
-						// <Element>   <First Name>
-						// /           <Last Name>
-						element = !split[0].Contains(" ") ? GenshinProcesor.FindElementByName(split[0].Trim()) : GenshinProcesor.FindElementByName(split[0].Split(' ')[0].Trim());
-
-						// Find character based on string after /
-						// Long name characters might search by their last name only but it'll still work.
-						name = GenshinProcesor.FindClosestCharacterName(Regex.Replace(split[1], @"[\W]", string.Empty));
-
-						if (!GenshinProcesor.CharacterMatchesElement(name, element)) { name = ""; element = ""; }
-                    }
-					n.Dispose();
+					ReadNameAndElement(bm, out name, out element);
 
 					if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(element))
 					{
@@ -303,6 +275,40 @@ namespace InventoryKamera
 			} while ( attempts < maxAttempts );
 			name = null;
 			element = null;
+		}
+
+		// Reads "<Element> / <Name>" from the character screen's name area. Leaves name and element
+		// empty when they can't be read or don't belong together.
+		internal static void ReadNameAndElement(Bitmap bm, out string name, out string element)
+		{
+			name = ""; element = "";
+			Bitmap n = GenshinProcesor.ConvertToGrayscale(bm);
+			GenshinProcesor.SetThreshold(110, ref n);
+			GenshinProcesor.SetInvert(ref n);
+
+			n = GenshinProcesor.ResizeImage(n, n.Width * 2, n.Height * 2);
+			string block = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.Auto).ToLower().Trim();
+			string line = GenshinProcesor.AnalyzeText(n, Tesseract.PageSegMode.SingleLine).ToLower().Trim();
+			n.Dispose();
+
+			// Characters with wrapped names will not have a slash
+			string nameAndElement = line.Contains("/") ? line : block;
+
+			if (nameAndElement.Contains("/"))
+			{
+				var split = nameAndElement.Split('/');
+
+				// Long name characters might look like
+				// <Element>   <First Name>
+				// /           <Last Name>
+				element = !split[0].Contains(" ") ? GenshinProcesor.FindElementByName(split[0].Trim()) : GenshinProcesor.FindElementByName(split[0].Split(' ')[0].Trim());
+
+				// Find character based on string after /
+				// Long name characters might search by their last name only but it'll still work.
+				name = GenshinProcesor.FindClosestCharacterName(Regex.Replace(split[1], @"[\W]", string.Empty));
+
+				if (!GenshinProcesor.CharacterMatchesElement(name, element)) { name = ""; element = ""; }
+			}
 		}
 
 		/// <param name="capUncertain">True when the level was read but no valid cap was found in any attempt.
