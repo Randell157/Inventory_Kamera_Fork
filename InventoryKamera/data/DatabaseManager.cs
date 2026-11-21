@@ -45,6 +45,7 @@ namespace InventoryKamera
         private const string ConstellationsURL = repoBaseURL + "ExcelBinOutput/FetterInfoExcelConfigData.json";
         private const string TalentsURL = repoBaseURL + "ExcelBinOutput/AvatarTalentExcelConfigData.json";
         private const string SkillsURL = repoBaseURL + "ExcelBinOutput/AvatarSkillExcelConfigData.json";
+        private const string SkillDepotsURL = repoBaseURL + "ExcelBinOutput/AvatarSkillDepotExcelConfigData.json";
 
         private const string ArtifactsDisplayItemURL = repoBaseURL + "ExcelBinOutput/DisplayItemExcelConfigData.json";
         private const string ArtifactsCodex = repoBaseURL + "ExcelBinOutput/ReliquaryCodexExcelConfigData.json";
@@ -358,6 +359,7 @@ namespace InventoryKamera
                 : JToken.Parse(LoadJsonFromFile(CharactersJson)).ToObject<ConcurrentDictionary<string, JObject>>();
 
             var newData = new ConcurrentDictionary<string, JObject>(data);
+            var refreshed = new List<string>();
 
             try
             {
@@ -365,6 +367,7 @@ namespace InventoryKamera
                 var constellations = JArray.Parse(LoadJsonFromURLAsync(ConstellationsURL)).ToObject<List<JObject>>();
                 var talents = JArray.Parse(LoadJsonFromURLAsync(TalentsURL)).ToObject<List<JObject>>();
                 var skills = JArray.Parse(LoadJsonFromURLAsync(SkillsURL)).ToObject<List<JObject>>();
+                var skillDepots = JArray.Parse(LoadJsonFromURLAsync(SkillDepotsURL)).ToObject<List<JObject>>();
 
                 characters.RemoveAll(c => !c.ContainsKey("useType") || c["useType"].ToString() != "AVATAR_FORMAL");
                 // Fixed order (and the sequential loop below) makes the output independent of source row order.
@@ -404,8 +407,8 @@ namespace InventoryKamera
 
                         var value = new JObject();
 
-                        // The Traveler is always rebuilt, so new elements reach existing tables.
-                        if (isTraveler || !newData.ContainsKey(nameKey))
+                        // Every character is rebuilt, so new Traveler elements and corrected data
+                        // (like an old wrong ConstellationOrder) reach existing tables.
                         {
                             value.Add("GOOD", nameGOOD);
 
@@ -483,42 +486,32 @@ namespace InventoryKamera
                                     GetConstellationNameFromId(characterID)
                                 });
 
-                                var constellationOrder = new JArray();
+                                var depot = skillDepots.FirstOrDefault(d => d["id"] != null && character["skillDepotId"] != null && (int)d["id"] == (int)character["skillDepotId"]);
 
-                                // The skill/burst name is always mentioned in the constellation's description so we'll check for it
-                                const3Description = talents.Where(entry => entry.Value<string>("icon")?.Contains(name) == true).ElementAt(2)["descTextMapHash"].ToString();
-                                const3Description = Mappings[const3Description].ToString();
-
-                                if (const3Description.Contains(auto))
+                                // Which talent a constellation raises: the skill it links to, looked up in the
+                                // character's skill depot. Without a link, fall back to the names in the text
+                                // (that misses a renamed Normal Attack, like Sandrone's).
+                                string RaisedTalent(string description)
                                 {
-                                    constellationOrder.Add("auto");
-                                } else if (const3Description.Contains(skill))
-                                {
-                                    constellationOrder.Add("skill");
-                                }
-                                else
-                                {
-                                    constellationOrder.Add("burst");
-                                }
-
-                                // The skill/burst name is always mentioned in the constellation's description so we'll check for it
-                                const5Description = talents.Where(entry => entry.Value<string>("icon")?.Contains(name) == true).ElementAt(4)["descTextMapHash"].ToString();
-                                const5Description = Mappings[const5Description].ToString();
-
-                                if (const5Description.Contains(auto))
-                                {
-                                    constellationOrder.Add("auto");
-                                }
-                                else if (const5Description.Contains(skill))
-                                {
-                                    constellationOrder.Add("skill");
-                                }
-                                else
-                                {
-                                    constellationOrder.Add("burst");
+                                    var link = Regex.Match(description, @"\{LINK#S(\d+)\}");
+                                    if (depot != null && link.Success)
+                                    {
+                                        int id = int.Parse(link.Groups[1].Value);
+                                        var depotSkills = depot["skills"] as JArray;
+                                        if (depotSkills != null && depotSkills.Count > 0 && (int)depotSkills[0] == id) return "auto";
+                                        if (depotSkills != null && depotSkills.Count > 1 && (int)depotSkills[1] == id) return "skill";
+                                        if (depot["energySkill"] != null && (int)depot["energySkill"] == id) return "burst";
+                                    }
+                                    if (description.Contains(auto)) return "auto";
+                                    if (description.Contains(skill)) return "skill";
+                                    return "burst";
                                 }
 
-                                value.Add("ConstellationOrder", constellationOrder);
+                                var constellationTalents = talents.Where(entry => entry.Value<string>("icon")?.Contains(name) == true).ToList();
+                                const3Description = Mappings[constellationTalents.ElementAt(2)["descTextMapHash"].ToString()].ToString();
+                                const5Description = Mappings[constellationTalents.ElementAt(4)["descTextMapHash"].ToString()].ToString();
+
+                                value.Add("ConstellationOrder", new JArray(RaisedTalent(const3Description), RaisedTalent(const5Description)));
 
                                 value.Add("Element", new JArray(GetElementFromID(characterID)));
                             }
@@ -534,16 +527,14 @@ namespace InventoryKamera
 
                             value.Add("WeaponType", (int)weaponType);
 
-                            if (isTraveler)
+                            // Replace a saved entry only when the rebuilt one differs.
+                            bool existed = newData.TryGetValue(nameKey, out var existing);
+                            if (!existed || !JToken.DeepEquals(existing, value))
                             {
-                                // Replace the cached Traveler only when the rebuilt entry differs.
-                                if (!newData.TryGetValue(nameKey, out var existing) || !JToken.DeepEquals(existing, value))
-                                {
-                                    newData[nameKey] = value;
-                                    if (status != UpdateStatus.Fail) status = UpdateStatus.Success;
-                                }
+                                newData[nameKey] = value;
+                                if (existed) refreshed.Add(nameKey);
+                                if (status != UpdateStatus.Fail) status = UpdateStatus.Success;
                             }
-                            else if (newData.TryAdd(nameKey, value) && status != UpdateStatus.Fail) status = UpdateStatus.Success;
                         }
                     }
                     catch (Exception ex)
@@ -590,6 +581,8 @@ namespace InventoryKamera
                 if (ValidateCharacterData(newData))
                 {
                     Logger.Info("Character data validation passed. Saving {0} characters.", newData.Count);
+                    if (refreshed.Count > 0)
+                        Logger.Info("Refreshed {0} existing character {1}: {2}", refreshed.Count, refreshed.Count == 1 ? "entry" : "entries", string.Join(", ", refreshed));
                     SaveJsonToFile(JsonConvert.SerializeObject(new SortedDictionary<string, JObject>(newData)), CharactersJson);
                 }
                 else

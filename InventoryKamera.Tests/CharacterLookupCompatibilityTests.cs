@@ -121,6 +121,63 @@ namespace InventoryKamera.Tests
             Assert.AreEqual("Fail", status.ToString());
         }
 
+        [TestMethod]
+        [Description("Item 5b: a constellation raising a renamed Normal Attack (Sandrone's C3) reads as auto")]
+        public void ConstellationOrderFollowsTheSkillLink()
+        {
+            var records = UpdateAndRead();
+            Assert.IsTrue(records.ContainsKey("sandrone"), "Sandrone is in the recorded game data");
+            CollectionAssert.AreEqual(new[] { "auto", "burst" }, records["sandrone"]["ConstellationOrder"].Values<string>().ToArray());
+        }
+
+        [TestMethod]
+        [Description("Item 5: a normal update rebuilds a stale saved character and keeps custom records")]
+        public void NonForcedUpdateRefreshesStaleCharacter()
+        {
+            var fresh = UpdateAndRead()["vesna"];
+            // Like Kamisato Ayaka's old ["burst","burst"]: a wrong order and a field missing.
+            var stale = (JObject)fresh.DeepClone();
+            stale["ConstellationOrder"] = new JArray("burst", "burst");
+            stale.Remove("ConstellationName");
+            var custom = JObject.Parse("{ 'GOOD':'Custom', 'Element':['anemo'], 'ConstellationOrder':['burst','skills'], 'WeaponType':0, 'ConstellationName':['Custom Constellation'] }");
+            File.WriteAllText(Path.Combine("inventorylists", "characters.json"), new JObject { ["vesna"] = stale, ["custom"] = custom }.ToString());
+
+            var records = UpdateAndRead();
+
+            Assert.AreEqual(Canonical(fresh), Canonical(records["vesna"]));
+            Assert.AreEqual(custom.ToString(Formatting.None), records["custom"].ToString(Formatting.None));
+        }
+
+        [TestMethod]
+        [Description("Item 5: an update with nothing new reports Skipped and leaves the saved table alone")]
+        public void SecondUpdateChangesNothing()
+        {
+            UpdateAndRead();
+            var path = Path.Combine("inventorylists", "characters.json");
+            var before = File.ReadAllBytes(path);
+
+            var status = new DatabaseManager().UpdateGameData(force: false);
+
+            Assert.AreEqual("Skipped", status.ToString());
+            CollectionAssert.AreEqual(before, File.ReadAllBytes(path));
+        }
+
+        [TestMethod]
+        [Description("Item 5: a character whose source rows are broken keeps its saved entry")]
+        public void BrokenSourceKeepsTheSavedEntry()
+        {
+            var saved = (JObject)UpdateAndRead()["vesna"].DeepClone();
+            saved["ConstellationOrder"] = new JArray("burst", "skill");
+            File.WriteAllText(Path.Combine("inventorylists", "characters.json"), new JObject { ["vesna"] = saved }.ToString());
+            var talents = JArray.Parse(FixtureRequestFactory.Documents["AvatarTalentExcelConfigData.json"]);
+            foreach (var row in talents.Where(row => ((string)row["icon"])?.Contains("Vesna") == true).ToList()) row.Remove();
+            FixtureRequestFactory.Documents["AvatarTalentExcelConfigData.json"] = talents.ToString(Formatting.None);
+
+            var records = UpdateAndRead();
+
+            Assert.AreEqual(Canonical(saved), Canonical(records["vesna"]));
+        }
+
         private static Dictionary<string, JObject> UpdateAndRead()
         {
             var database = new DatabaseManager();

@@ -23,7 +23,7 @@ dotnet test InventoryKamera.Tests\InventoryKamera.Tests.csproj -c Release -p:Pla
 
 - Scrapers: `InventoryKamera/scraping/` (`CharacterScraper`, `WeaponScraper`, `ArtifactScraper`, `MaterialScraper`; OCR helpers in `GenshinProcesor`).
 - GOOD export: `InventoryKamera/data/GOOD.cs` writes `genshinData_GOOD_yyyy_MM_dd_HH_mm.json` to the Output Path setting (default `<exe dir>\GenshinData`).
-- Lookup tables: `inventorylists/{characters,weapons,artifacts,materials}.json` + `version.txt` next to the exe. These files are not in git. `data/DatabaseManager.cs` generates them from Dimbreath/AnimeGameData2 on GitLab (TextMap + ExcelBinOutput). The updater regenerates them, so fix the generator, not the JSON. In non-force updates, existing character entries are kept and not rebuilt.
+- Lookup tables: `inventorylists/{characters,weapons,artifacts,materials}.json` + `version.txt` next to the exe. These files are not in git. `data/DatabaseManager.cs` generates them from Dimbreath/AnimeGameData2 on GitLab (TextMap + ExcelBinOutput). The updater regenerates them, so fix the generator, not the JSON. Non-force updates rebuild every character from the game data and replace a saved entry only when it differs; entries not in the game data (mannequins, custom) are kept.
 - Logs: `<exe dir>\logging\InventoryKamera.log` and `InventoryKamera.debug.log`, plus failed-OCR screenshots in `logging\{characters,weapons,artifacts,materials}\`. These folders are wiped at the start of each scan.
 - The user's 1.4.5 evidence: logs in `C:\Users\rande\Documents\Inventory.Kamera.v1.4.5\logging\`, exports in `C:\Users\rande\Documents\InventoryKamera\Player\`. Logs are large, so grep them instead of reading them whole. Logs and exports are account data, so never commit them.
 
