@@ -194,7 +194,7 @@ namespace InventoryKamera
             }
         }
 
-        public async void QueueScan(int id)
+        public void QueueScan(int id)
 		{
 			var card = GetSettledItemCard(isWeapon: false);
             Bitmap name, gearSlot, mainStat, subStats, level, equipped, locked, sanctify;
