@@ -69,9 +69,7 @@
             this.FileSelectButton = new System.Windows.Forms.Button();
             this.ScannerDelay_Label = new System.Windows.Forms.Label();
             this.ScanItemsList_Label = new System.Windows.Forms.Label();
-            this.FastScannerDelay_Label = new System.Windows.Forms.Label();
-            this.MidScannerDelay_Label = new System.Windows.Forms.Label();
-            this.SlowScannerDelay_Label = new System.Windows.Forms.Label();
+            this.ScanSpeedHint_Label = new System.Windows.Forms.Label();
             this.FileLocation_Label = new System.Windows.Forms.Label();
             this.Language_Label = new System.Windows.Forms.Label();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
@@ -117,7 +115,7 @@
             this.Characters_CheckBox = new System.Windows.Forms.CheckBox();
             this.Artifacts_Checkbox = new System.Windows.Forms.CheckBox();
             this.Weapons_CheckBox = new System.Windows.Forms.CheckBox();
-            this.ScannerDelay_TrackBar = new System.Windows.Forms.TrackBar();
+            this.ScanSpeed_ComboBox = new System.Windows.Forms.ComboBox();
             this.ZeroMeansAllTooltips = new System.Windows.Forms.ToolTip(this.components);
             this.label6 = new System.Windows.Forms.Label();
             this.label7 = new System.Windows.Forms.Label();
@@ -138,7 +136,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.MinimumWeaponLevelControl)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.ArtifactRarityControl)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.WeaponRarityControl)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.ScannerDelay_TrackBar)).BeginInit();
             this.SuspendLayout();
             // 
             // StartScan_Button
@@ -577,9 +574,9 @@
             this.ScannerDelay_Label.Location = new System.Drawing.Point(10, 258);
             this.ScannerDelay_Label.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.ScannerDelay_Label.Name = "ScannerDelay_Label";
-            this.ScannerDelay_Label.Size = new System.Drawing.Size(77, 13);
+            this.ScannerDelay_Label.Size = new System.Drawing.Size(76, 13);
             this.ScannerDelay_Label.TabIndex = 69;
-            this.ScannerDelay_Label.Text = "Scanner Delay";
+            this.ScannerDelay_Label.Text = "Delay per item";
             // 
             // ScanItemsList_Label
             // 
@@ -592,38 +589,16 @@
             this.ScanItemsList_Label.TabIndex = 71;
             this.ScanItemsList_Label.Text = "Scan Items";
             // 
-            // FastScannerDelay_Label
+            // ScanSpeedHint_Label
             // 
-            this.FastScannerDelay_Label.AutoSize = true;
-            this.FastScannerDelay_Label.Font = new System.Drawing.Font("Microsoft Sans Serif", 6F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.FastScannerDelay_Label.Location = new System.Drawing.Point(18, 303);
-            this.FastScannerDelay_Label.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.FastScannerDelay_Label.Name = "FastScannerDelay_Label";
-            this.FastScannerDelay_Label.Size = new System.Drawing.Size(20, 9);
-            this.FastScannerDelay_Label.TabIndex = 74;
-            this.FastScannerDelay_Label.Text = "Fast";
-            // 
-            // MidScannerDelay_Label
-            // 
-            this.MidScannerDelay_Label.AutoSize = true;
-            this.MidScannerDelay_Label.Font = new System.Drawing.Font("Microsoft Sans Serif", 6F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.MidScannerDelay_Label.Location = new System.Drawing.Point(60, 303);
-            this.MidScannerDelay_Label.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.MidScannerDelay_Label.Name = "MidScannerDelay_Label";
-            this.MidScannerDelay_Label.Size = new System.Drawing.Size(29, 9);
-            this.MidScannerDelay_Label.TabIndex = 75;
-            this.MidScannerDelay_Label.Text = "Slower";
-            // 
-            // SlowScannerDelay_Label
-            // 
-            this.SlowScannerDelay_Label.AutoSize = true;
-            this.SlowScannerDelay_Label.Font = new System.Drawing.Font("Microsoft Sans Serif", 6F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.SlowScannerDelay_Label.Location = new System.Drawing.Point(108, 303);
-            this.SlowScannerDelay_Label.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.SlowScannerDelay_Label.Name = "SlowScannerDelay_Label";
-            this.SlowScannerDelay_Label.Size = new System.Drawing.Size(22, 9);
-            this.SlowScannerDelay_Label.TabIndex = 76;
-            this.SlowScannerDelay_Label.Text = "Slow";
+            this.ScanSpeedHint_Label.AutoSize = true;
+            this.ScanSpeedHint_Label.ForeColor = System.Drawing.SystemColors.GrayText;
+            this.ScanSpeedHint_Label.Location = new System.Drawing.Point(10, 300);
+            this.ScanSpeedHint_Label.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
+            this.ScanSpeedHint_Label.Name = "ScanSpeedHint_Label";
+            this.ScanSpeedHint_Label.Size = new System.Drawing.Size(89, 13);
+            this.ScanSpeedHint_Label.TabIndex = 74;
+            this.ScanSpeedHint_Label.Text = "= 3 OCR workers";
             // 
             // FileLocation_Label
             // 
@@ -1100,17 +1075,19 @@
             this.Weapons_CheckBox.Text = "Weapons";
             this.Weapons_CheckBox.UseVisualStyleBackColor = true;
             // 
-            // ScannerDelay_TrackBar
+            // ScanSpeed_ComboBox
             // 
-            this.ScannerDelay_TrackBar.DataBindings.Add(new System.Windows.Forms.Binding("Value", global::InventoryKamera.Properties.Settings.Default, "ScannerDelay", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged, null, "N0"));
-            this.ScannerDelay_TrackBar.Location = new System.Drawing.Point(10, 274);
-            this.ScannerDelay_TrackBar.Margin = new System.Windows.Forms.Padding(2);
-            this.ScannerDelay_TrackBar.Maximum = 2;
-            this.ScannerDelay_TrackBar.Name = "ScannerDelay_TrackBar";
-            this.ScannerDelay_TrackBar.Size = new System.Drawing.Size(129, 45);
-            this.ScannerDelay_TrackBar.TabIndex = 68;
-            this.ScannerDelay_TrackBar.Value = global::InventoryKamera.Properties.Settings.Default.ScannerDelay;
-            this.ScannerDelay_TrackBar.ValueChanged += new System.EventHandler(this.ScannerDelay_TrackBar_ValueChanged);
+            this.ScanSpeed_ComboBox.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawFixed;
+            this.ScanSpeed_ComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.ScanSpeed_ComboBox.ItemHeight = 15;
+            this.ScanSpeed_ComboBox.Location = new System.Drawing.Point(10, 276);
+            this.ScanSpeed_ComboBox.Margin = new System.Windows.Forms.Padding(2);
+            this.ScanSpeed_ComboBox.Name = "ScanSpeed_ComboBox";
+            this.ScanSpeed_ComboBox.Size = new System.Drawing.Size(129, 21);
+            this.ScanSpeed_ComboBox.TabIndex = 68;
+            this.ScanSpeed_ComboBox.DrawItem += new System.Windows.Forms.DrawItemEventHandler(this.ScanSpeed_ComboBox_DrawItem);
+            this.ScanSpeed_ComboBox.SelectedIndexChanged += new System.EventHandler(this.ScanSpeed_ComboBox_SelectedIndexChanged);
+            this.ScanSpeed_ComboBox.DropDownClosed += new System.EventHandler(this.ScanSpeed_ComboBox_DropDownClosed);
             // 
             // label6
             // 
@@ -1188,12 +1165,10 @@
             this.Controls.Add(this.Weapons_CheckBox);
             this.Controls.Add(this.Language_Label);
             this.Controls.Add(this.FileLocation_Label);
-            this.Controls.Add(this.SlowScannerDelay_Label);
-            this.Controls.Add(this.MidScannerDelay_Label);
-            this.Controls.Add(this.FastScannerDelay_Label);
+            this.Controls.Add(this.ScanSpeedHint_Label);
             this.Controls.Add(this.ScanItemsList_Label);
             this.Controls.Add(this.ScannerDelay_Label);
-            this.Controls.Add(this.ScannerDelay_TrackBar);
+            this.Controls.Add(this.ScanSpeed_ComboBox);
             this.Controls.Add(this.ScannerOutput_Panel);
             this.Controls.Add(this.Navigation_Label);
             this.Controls.Add(this.Navigation_Image);
@@ -1241,7 +1216,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.MinimumWeaponLevelControl)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.ArtifactRarityControl)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.WeaponRarityControl)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.ScannerDelay_TrackBar)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -1283,15 +1257,13 @@
         private System.Windows.Forms.PictureBox Navigation_Image;
         private System.Windows.Forms.Label Navigation_Label;
         private System.Windows.Forms.Panel ScannerOutput_Panel;
-        private System.Windows.Forms.TrackBar ScannerDelay_TrackBar;
+        private System.Windows.Forms.ComboBox ScanSpeed_ComboBox;
         private System.Windows.Forms.Label ScannerDelay_Label;
         private System.Windows.Forms.CheckBox Weapons_CheckBox;
         private System.Windows.Forms.Label ScanItemsList_Label;
         private System.Windows.Forms.CheckBox Artifacts_Checkbox;
         private System.Windows.Forms.CheckBox Characters_CheckBox;
-        private System.Windows.Forms.Label FastScannerDelay_Label;
-        private System.Windows.Forms.Label MidScannerDelay_Label;
-        private System.Windows.Forms.Label SlowScannerDelay_Label;
+        private System.Windows.Forms.Label ScanSpeedHint_Label;
         private System.Windows.Forms.Button FileSelectButton;
         private System.Windows.Forms.Label FileLocation_Label;
         private System.Windows.Forms.TextBox OutputPath_TextBox;

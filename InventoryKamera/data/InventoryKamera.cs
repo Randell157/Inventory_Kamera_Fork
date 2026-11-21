@@ -57,15 +57,7 @@ namespace InventoryKamera
 
 			b_threadCancel = false;
 
-            switch (Properties.Settings.Default.ScannerDelay)
-            {
-				case 0:
-					NumWorkers = 3;
-					break;
-				default:
-					NumWorkers = 2;
-					break;
-            }
+			NumWorkers = ScanSpeeds.Workers(Properties.Settings.Default.ScanSpeed);
 			Logger.Info("Kamera initialized");
 		}
 

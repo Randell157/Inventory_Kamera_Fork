@@ -600,6 +600,13 @@ namespace InventoryKamera
 
         public static void SystemWait(Speed speed = Speed.Normal)
 		{
+			Wait((int)(BaseWait(speed) * delay));
+		}
+
+		// Each wait before the Scanner Delay setting multiplies it (0.5 on Fast). The window shows
+		// some of these next to the slider, so they come from here rather than a copy.
+		internal static double BaseWait(Speed speed)
+		{
 			double value;
 			switch (speed)
 			{
@@ -659,9 +666,7 @@ namespace InventoryKamera
 					value = 1000;
 					break;
 			}
-			value *= delay;
-
-			Wait(((int)value));
+			return value;
 		}
 
 		public static void SystemWait(float ms)

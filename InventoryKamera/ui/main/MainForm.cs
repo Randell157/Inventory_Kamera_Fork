@@ -7,6 +7,7 @@ using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -27,8 +28,6 @@ namespace InventoryKamera
         private static Thread scannerThread;
         private static InventoryKamera data = new InventoryKamera();
         private static DatabaseManager databaseManager = new DatabaseManager();
-
-        private int Delay;
 
         private bool running = false;
 
@@ -112,24 +111,6 @@ namespace InventoryKamera
 
         #endregion "0 = all" hints
 
-        private double ScannerDelayValue(int value)
-        {
-            switch (value)
-            {
-                case 0:
-                    return 0.5;
-
-                case 1:
-                    return 1;
-
-                case 2:
-                    return 1.5;
-
-                default:
-                    return 1;
-            }
-        }
-
         private void Hotkey_Pressed(object sender, HotkeyEventArgs e)
         {
             Logger.Info("Hotkey pressed");
@@ -184,7 +165,7 @@ namespace InventoryKamera
 
             UpdateKeyTextBoxes();
 
-            Delay = ScannerDelay_TrackBar.Value;
+            LoadScanSpeed();
 
             ProgramStatus_Label.Text = "";
             if (string.IsNullOrWhiteSpace(OutputPath_TextBox.Text))
@@ -343,7 +324,7 @@ namespace InventoryKamera
                     $"\tMin Artifact Rarity:\t {settings.MinimumArtifactRarity}\n" +
                     $"\tMin Artifact Level:\t\t {settings.MinimumArtifactLevel}\n" +
                     $"\tEquip Artifacts:\t\t {settings.EquipArtifacts}\n" +
-                    $"\tDelay:\t\t\t\t\t {settings.ScannerDelay}";
+                    $"\tScan speed:\t\t\t\t {ScanSpeeds.LogText(settings.ScanSpeed)}";
 
                 Logger.Info("Scan settings: {0}", options);
 
@@ -372,7 +353,7 @@ namespace InventoryKamera
                         Logger.Info("Resolution: {0}x{1}", Navigation.GetSize().Width, Navigation.GetSize().Height);
 
                         // Add navigation delay
-                        Navigation.SetDelay(ScannerDelayValue(Delay));
+                        Navigation.SetDelay(ScanSpeeds.Factor(Properties.Settings.Default.ScanSpeed));
 
 
                         // The Data object of json object
@@ -538,10 +519,71 @@ namespace InventoryKamera
             Properties.Settings.Default.Save();
         }
 
-        private void ScannerDelay_TrackBar_ValueChanged(object sender, EventArgs e)
+        #region Scan speed drop-down
+
+        private ToolTip scanSpeedToolTip;   // hovering the closed box or its heading: the current setting
+        private ToolTip scanChoiceToolTip;  // pointing at a choice in the open list: that choice
+        private int shownChoiceTip = -1;
+
+        // Fills the drop-down and selects the saved speed. The first time, the speed comes from the old
+        // slider's setting (Fast / Slower / Slow → Fastest / Normal / Slowest).
+        private void LoadScanSpeed()
         {
-            Delay = ((TrackBar)sender).Value;
+            var settings = Properties.Settings.Default;
+            int step = ScanSpeeds.Stored(settings.ScanSpeed, settings.ScannerDelay);
+            if (settings.ScanSpeed != step)
+            {
+                Logger.Info("Scan speed set from the old Scanner Delay setting {0}: {1}", settings.ScannerDelay, ScanSpeeds.LogText(step));
+                settings.ScanSpeed = step;
+                settings.Save();
+            }
+
+            scanSpeedToolTip = new ToolTip(components) { AutoPopDelay = 30000 };
+            scanChoiceToolTip = new ToolTip(components);
+            ScanSpeed_ComboBox.Items.Clear();
+            for (int i = 0; i < ScanSpeeds.Count; i++) ScanSpeed_ComboBox.Items.Add(ScanSpeeds.ItemText(i));
+            ScanSpeed_ComboBox.SelectedIndex = step;   // raises SelectedIndexChanged, which fills the hint and tooltip
         }
+
+        private void ScanSpeed_ComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            int step = ScanSpeed_ComboBox.SelectedIndex;
+            if (step < 0) return;
+            Properties.Settings.Default.ScanSpeed = step;
+            ScanSpeedHint_Label.Text = ScanSpeeds.HintText(step);
+            string tip = ScanSpeeds.TooltipText(step);
+            scanSpeedToolTip.SetToolTip(ScanSpeed_ComboBox, tip);
+            scanSpeedToolTip.SetToolTip(ScannerDelay_Label, tip);
+            scanSpeedToolTip.SetToolTip(ScanSpeedHint_Label, tip);
+        }
+
+        // Drawn by the form (DrawMode.OwnerDrawFixed) only so it can tell which choice is under the pointer:
+        // while the list is open, Windows highlights that choice, and its tooltip is shown beside the list.
+        private void ScanSpeed_ComboBox_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            if (e.Index < 0) return;
+            e.DrawBackground();
+            TextRenderer.DrawText(e.Graphics, ScanSpeed_ComboBox.Items[e.Index].ToString(), e.Font, e.Bounds, e.ForeColor,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            e.DrawFocusRectangle();
+
+            bool inOpenList = ScanSpeed_ComboBox.DroppedDown && (e.State & DrawItemState.ComboBoxEdit) == 0;
+            if (inOpenList && (e.State & DrawItemState.Selected) != 0 && e.Index != shownChoiceTip)
+            {
+                shownChoiceTip = e.Index;
+                // Beside the list, level with the choice. The list opens right under the box.
+                scanChoiceToolTip.Show(ScanSpeeds.TooltipText(e.Index, forChoice: true), ScanSpeed_ComboBox,
+                    ScanSpeed_ComboBox.Width + 6, ScanSpeed_ComboBox.Height + e.Bounds.Top);
+            }
+        }
+
+        private void ScanSpeed_ComboBox_DropDownClosed(object sender, EventArgs e)
+        {
+            scanChoiceToolTip.Hide(ScanSpeed_ComboBox);
+            shownChoiceTip = -1;
+        }
+
+        #endregion Scan speed drop-down
 
         private void Exit_MenuItem_Click(object sender, EventArgs e)
         {
