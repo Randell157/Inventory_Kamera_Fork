@@ -328,10 +328,9 @@ namespace InventoryKamera
 				Color equippedStatus = bm[a_equippedCharacter].GetPixel(5, 5);
 				bool b_equipped = GenshinProcesor.CompareColors(equippedColor, equippedStatus);
 
-				// Check for lock color
-				Color lockedColor = Color.FromArgb(255, 70, 80, 100); // Dark area around red lock
-				Color lockStatus = bm[a_lock].GetPixel(10, 10);
-				_lock = GenshinProcesor.CompareColors(lockedColor, lockStatus);
+				// The red padlock, not the box behind it: the box may still be fading from the
+				// previous artifact's unlocked look (79 of 2,181 were misread that way).
+				_lock = IsLockIconRed(bm[a_lock]);
 
 				// Improved Scanning using multi threading
 				List<Task> tasks = new List<Task>();

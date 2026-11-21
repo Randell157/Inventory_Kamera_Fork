@@ -540,7 +540,8 @@ namespace InventoryKamera
         /// <summary>
         /// True when the lock crop shows the red padlock of a locked item. An unlocked item shows a grey
         /// padlock. The box behind the padlock is not used, because when the previous item had the other
-        /// lock state, the box is still fading when the card is captured. The padlock is already drawn.
+        /// lock state, the box is still fading when the card is captured. The padlock is already drawn,
+        /// though a card caught very early can show it only partly red.
         /// </summary>
         internal static bool IsLockIconRed(Bitmap lockCrop)
         {
@@ -551,8 +552,9 @@ namespace InventoryKamera
                     Color c = lockCrop.GetPixel(x, y);
                     if (c.R >= 150 && c.R - c.G >= 50 && c.R - c.B >= 60) red++;
                 }
-            // A 1920x1080 crop has 327-464 red pixels when locked and 0 when unlocked.
-            return red >= lockCrop.Width * lockCrop.Height / 20;
+            // A 1920x1080 crop (47x46) had 327-464 red pixels on locked weapons and 141-479 on locked
+            // artifacts (141 = padlock still half faded), and 0 when unlocked. Cut-off: 2% (43 px).
+            return red >= lockCrop.Width * lockCrop.Height / 50;
         }
 
         /// <summary>
