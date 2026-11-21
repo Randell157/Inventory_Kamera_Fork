@@ -409,7 +409,7 @@
             // 
             this.ProgramStatus_Label.AutoSize = true;
             this.ProgramStatus_Label.Font = new System.Drawing.Font("Microsoft Sans Serif", 15F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ProgramStatus_Label.ForeColor = System.Drawing.Color.Green;
+            this.ProgramStatus_Label.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(110)))), ((int)(((byte)(0)))));
             this.ProgramStatus_Label.Location = new System.Drawing.Point(5, 319);
             this.ProgramStatus_Label.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.ProgramStatus_Label.Name = "ProgramStatus_Label";
@@ -434,7 +434,7 @@
             // 
             this.ErrorLog_TextBox.AcceptsReturn = true;
             this.ErrorLog_TextBox.BackColor = System.Drawing.SystemColors.Control;
-            this.ErrorLog_TextBox.ForeColor = System.Drawing.Color.Red;
+            this.ErrorLog_TextBox.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(0)))), ((int)(((byte)(0)))));
             this.ErrorLog_TextBox.Location = new System.Drawing.Point(2, 240);
             this.ErrorLog_TextBox.Margin = new System.Windows.Forms.Padding(2);
             this.ErrorLog_TextBox.Multiline = true;
@@ -472,7 +472,7 @@
             // IssuesPage_Label
             // 
             this.IssuesPage_Label.AutoSize = true;
-            this.IssuesPage_Label.LinkColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(192)))), ((int)(((byte)(0)))));
+            this.IssuesPage_Label.LinkColor = System.Drawing.Color.FromArgb(((int)(((byte)(134)))), ((int)(((byte)(239)))), ((int)(((byte)(172)))));
             this.IssuesPage_Label.Location = new System.Drawing.Point(332, 221);
             this.IssuesPage_Label.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.IssuesPage_Label.Name = "IssuesPage_Label";

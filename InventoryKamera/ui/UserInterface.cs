@@ -238,8 +238,16 @@ namespace InventoryKamera
 		// Dark enough to keep 4.5:1 contrast on the window's gray background.
 		public static readonly Color PreparingColor = Color.FromArgb(146, 64, 14);
 
+		// Green and red for the other states, also dark enough for 4.5:1 on the window's gray
+		// (plain Color.Green and Color.Red were 4.15:1 and 3.23:1).
+		public static readonly Color OkColor = Color.FromArgb(0, 110, 0);
+		public static readonly Color ErrorColor = Color.FromArgb(192, 0, 0);
+
+		// The main window's background; the status label sits on it.
+		public static readonly Color WindowColor = Color.FromArgb(234, 230, 230);
+
 		public static void SetProgramStatus(string status, bool ok = true) =>
-			SetProgramStatus(status, ok ? Color.Green : Color.Red);
+			SetProgramStatus(status, ok ? OkColor : ErrorColor);
 
 		public static void SetProgramStatus(string status, Color color)
 		{
