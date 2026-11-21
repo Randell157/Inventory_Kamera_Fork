@@ -954,8 +954,7 @@
             this.wandererNameTextBox.TabIndex = 105;
             this.wandererNameTextBox.Text = global::InventoryKamera.Properties.Settings.Default.WandererName;
             this.wandererNameTextBox.TextChanged += new System.EventHandler(this.ValidateCustomName);
-            this.wandererNameTextBox.MouseHover += new System.EventHandler(this.DisplayCustomNameTooltip);
-            this.wandererNameTextBox.ParentChanged += new System.EventHandler(this.ValidateCustomName2);
+            this.wandererNameTextBox.ParentChanged += new System.EventHandler(this.ValidateCustomName);
             // 
             // travelerNameTextBox
             // 
@@ -966,7 +965,6 @@
             this.travelerNameTextBox.TabIndex = 101;
             this.travelerNameTextBox.Text = global::InventoryKamera.Properties.Settings.Default.TravelerName;
             this.travelerNameTextBox.TextChanged += new System.EventHandler(this.ValidateCustomName);
-            this.travelerNameTextBox.MouseHover += new System.EventHandler(this.DisplayCustomNameTooltip);
             this.travelerNameTextBox.ParentChanged += new System.EventHandler(this.ValidateCustomName);
             // 
             // numericUpDown1
@@ -1186,7 +1184,8 @@
             this.textBox1.Size = new System.Drawing.Size(169, 20);
             this.textBox1.TabIndex = 113;
             this.textBox1.Text = "Manequin1";
-            this.textBox1.TextChanged += new System.EventHandler(this.ValidateCustomName1);
+            this.textBox1.TextChanged += new System.EventHandler(this.ValidateCustomName);
+            this.textBox1.ParentChanged += new System.EventHandler(this.ValidateCustomName);
             // 
             // textBox2
             // 
@@ -1196,7 +1195,8 @@
             this.textBox2.Size = new System.Drawing.Size(169, 20);
             this.textBox2.TabIndex = 114;
             this.textBox2.Text = "Manequin2";
-            this.textBox2.TextChanged += new System.EventHandler(this.ValidateCustomName2);
+            this.textBox2.TextChanged += new System.EventHandler(this.ValidateCustomName);
+            this.textBox2.ParentChanged += new System.EventHandler(this.ValidateCustomName);
             // 
             // MainForm
             // 

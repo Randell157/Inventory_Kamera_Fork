@@ -33,7 +33,17 @@ namespace InventoryKamera
 
         public MainForm()
         {
+            // A blank Wanderer or mannequin name saved earlier gets its default back before the
+            // boxes bind to the settings.
+            foreach (var setting in CustomNames.FilledWhenEmpty)
+                Properties.Settings.Default[setting] = CustomNames.OrDefault(setting, Properties.Settings.Default[setting] as string);
+
             InitializeComponent();
+
+            // Leaving one of these boxes empty fills its default back in (not the Traveler's:
+            // empty there means "read the name from the game").
+            foreach (var (box, setting) in new[] { (wandererNameTextBox, "WandererName"), (textBox1, "Manequin1Name"), (textBox2, "Manequin2Name") })
+                box.Leave += (s, e) => { if (string.IsNullOrWhiteSpace(box.Text)) box.Text = CustomNames.OrDefault(setting, box.Text); };
 
             Language_ComboBox.SelectedItem = "ENG";
 
@@ -223,71 +233,33 @@ namespace InventoryKamera
             }
         }
 
+        // Yellow only when a box holds another character's name; its own default
+        // ("Wanderer", "Manequin1"...) and an empty box stay white.
         private void ValidateCustomName(object sender, EventArgs e)
         {
             var textbox = sender as TextBox;
-            var name = textbox.Text;
+            if (textbox == null) return;
 
-            if (!string.IsNullOrWhiteSpace(name))
-            {
-                if (GenshinProcesor.Characters.ContainsKey(name.ConvertToGood().ToLower()))
-                {
-                    textbox.BackColor = Color.Yellow;
-                }
-                else
-                {
-                    textbox.BackColor = Color.White;
-                }
-            }
+            string ownKey;
+            if (textbox == travelerNameTextBox) ownKey = "traveler";
+            else if (textbox == wandererNameTextBox) ownKey = "wanderer";
+            else if (textbox == textBox1) ownKey = "manequin1";
+            else if (textbox == textBox2) ownKey = "manequin2";
+            else return;
+
+            bool clash = GenshinProcesor.NameBelongsToAnotherCharacter(textbox.Text, ownKey);
+            textbox.BackColor = clash ? Color.Yellow : Color.White;
+            // One shared tooltip: Windows shows it while hovering and hides it on leaving,
+            // so it can't stack (a new ToolTip per hover used to pile up copies).
+            customNameToolTip.SetToolTip(textbox, clash
+                ? $"{textbox.Text} already exists as a character's name.\n" +
+                  "This may affect equipping items to characters and is not fully supported yet."
+                : null);
         }
 
-        private void ValidateCustomName1(object sender, EventArgs e)
-        {
-            var textbox = sender as TextBox;
-            var name = textbox.Text;
-
-            if (!string.IsNullOrWhiteSpace(name))
-            {
-                if (GenshinProcesor.Characters.ContainsKey(name.ConvertToGood().ToLower()))
-                {
-                    textbox.BackColor = Color.Yellow;
-                }
-                else
-                {
-                    textbox.BackColor = Color.White;
-                }
-            }
-        }
-        private void ValidateCustomName2(object sender, EventArgs e)
-        {
-            var textbox = sender as TextBox;
-            var name = textbox.Text;
-
-            if (!string.IsNullOrWhiteSpace(name))
-            {
-                if (GenshinProcesor.Characters.ContainsKey(name.ConvertToGood().ToLower()))
-                {
-                    textbox.BackColor = Color.Yellow;
-                }
-                else
-                {
-                    textbox.BackColor = Color.White;
-                }
-            }
-        }
-
-
-        private void DisplayCustomNameTooltip(object sender, EventArgs e)
-        {
-            var textbox = sender as TextBox;
-            
-            if (textbox.BackColor == Color.Yellow)
-            {
-                var tooltip = new ToolTip();
-                tooltip.Show($"{textbox.Text} already exists as a character's name.\n" +
-                    $"This may affect equipping items to characters and is not fully supported yet.", textbox);
-            }
-        }
+        // Created with the form (field initializers run before InitializeComponent, whose
+        // ParentChanged events already call ValidateCustomName).
+        private readonly ToolTip customNameToolTip = new ToolTip();
 
         private void StartButton_Clicked(object sender, EventArgs e)
         {

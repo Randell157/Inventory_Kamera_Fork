@@ -164,12 +164,12 @@ namespace InventoryKamera
 			GenshinProcesor.AssignTravelerName(Properties.Settings.Default.TravelerName);
 
             // Assign Wanderer's custom name
-            GenshinProcesor.UpdateCharacterName("wanderer", Properties.Settings.Default.WandererName);
+            GenshinProcesor.UpdateCharacterName("wanderer", CustomNames.OrDefault("WandererName", Properties.Settings.Default.WandererName));
 
 			// Mannequins are skipped by the character scan, but their custom names still need
 			// matching. GenshinProcesor.ReloadData adds their entries, so these can't fail.
-			GenshinProcesor.UpdateCharacterName("manequin1", Properties.Settings.Default.Manequin1Name);
-			GenshinProcesor.UpdateCharacterName("manequin2", Properties.Settings.Default.Manequin2Name);
+			GenshinProcesor.UpdateCharacterName("manequin1", CustomNames.OrDefault("Manequin1Name", Properties.Settings.Default.Manequin1Name));
+			GenshinProcesor.UpdateCharacterName("manequin2", CustomNames.OrDefault("Manequin2Name", Properties.Settings.Default.Manequin2Name));
 
             if (Properties.Settings.Default.ScanWeapons)
 			{

@@ -279,6 +279,15 @@ namespace InventoryKamera
 			return character.Contains("Traveler") || character == "Wanderer" || character == "Manequin1" || character == "Manequin2" || Characters.ContainsKey(character.ToLower());
 		}
 
+		// A custom name (Traveler, Wanderer, mannequins) is a problem only when it is another
+		// character's name; the box's own character (ownKey, e.g. "wanderer") never counts.
+		internal static bool NameBelongsToAnotherCharacter(string name, string ownKey)
+		{
+			if (string.IsNullOrWhiteSpace(name)) return false;
+			var key = name.ConvertToGood().ToLower();
+			return key != ownKey && Characters.ContainsKey(key);
+		}
+
 		internal static bool IsValidElement(string element)
 		{
 			return Elements.ContainsValue(element) || Elements.ContainsKey(element.ToLower());
