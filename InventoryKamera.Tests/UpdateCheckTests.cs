@@ -8,11 +8,14 @@ namespace InventoryKamera.Tests
     [TestClass]
     public sealed class UpdateCheckTests
     {
+        // This fork's releases start at 1.5.0 (1.4.x belongs to the upstream forks). Checked as a
+        // floor, not an exact value, so a version bump doesn't break the test.
         [TestMethod]
-        public void BuildIsVersionOnePointFive()
+        public void BuildIsThisForksVersion()
         {
             var version = typeof(ForkRepository).Assembly.GetName().Version;
-            Assert.AreEqual("1.5.0", version.ToString(3));
+            Assert.IsTrue(new Version(version.Major, version.Minor, version.Build) >= new Version(1, 5, 0), version.ToString());
+            Assert.AreEqual(1, version.Major, "a 2.x version would clash with taiwenlee's v2.0.0 pre-releases");
         }
 
         [TestMethod]

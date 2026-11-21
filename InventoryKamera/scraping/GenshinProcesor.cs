@@ -107,11 +107,33 @@ namespace InventoryKamera
 			var listManager = new DatabaseManager();
 
 			Characters = listManager.LoadCharacters();
+			AddMannequins(Characters);
 			Artifacts = listManager.LoadArtifacts();
 			Weapons = listManager.LoadWeapons();
 			DevItems = listManager.LoadDevItems();
 			Materials = listManager.LoadMaterials();
 
+		}
+
+		// Mannequins are playable characters whose names the player chooses. Genshin Optimizer
+		// doesn't support them, so the character scan skips them, but it needs entries to
+		// recognize their custom names. The game data has none, so they're added in memory here.
+		// (This used to edit characters.json as text and restart the whole scan.)
+		internal static void AddMannequins(Dictionary<string, JObject> characters)
+		{
+			foreach (var good in new[] { "Manequin1", "Manequin2" })
+			{
+				string key = good.ToLower();
+				if (characters.ContainsKey(key)) continue;
+				characters[key] = new JObject
+				{
+					["GOOD"] = good,
+					["ConstellationName"] = new JArray("Mannequin: skipped by the scan, Genshin Optimizer doesn't support mannequins"),
+					["ConstellationOrder"] = new JArray("burst", "skill"),
+					["Element"] = new JArray("anemo", "geo", "electro", "dendro", "hydro", "pyro", "cryo"),
+					["WeaponType"] = 0,
+				};
+			}
 		}
 
 		internal static void UpdateCharacterName(string target, string name)

@@ -150,7 +150,6 @@
     <!-- Needed at runtime to read the images embedded by GenerateResourceUsePreserializedResources. -->
     <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
     <PackageReference Include="Accord.Imaging" Version="3.8.0" />
-    <PackageReference Include="HtmlAgilityPack.NetCore" Version="1.5.0.1" />
     <PackageReference Include="InputSimulator" Version="1.0.4" />
     <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
     <PackageReference Include="Microsoft.Win32.Primitives" Version="4.3.0" />

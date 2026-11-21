@@ -32,7 +32,11 @@ namespace InventoryKamera
 			while (true)
 			{
 				var character = ScanCharacter(first);
-				if(character.NameGOOD != "manequin")
+				if (Character.IsMannequin(character.NameGOOD))
+				{
+					Logger.Info("Skipped {0}: Genshin Optimizer doesn't support mannequins", character.NameGOOD);
+				}
+				else
 				{
                     if (Characters.Count > 0 && character.NameGOOD == Characters.ElementAt(0).NameGOOD) break;
                     if (character.IsValid())

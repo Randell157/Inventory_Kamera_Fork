@@ -111,13 +111,14 @@ namespace InventoryKamera
 								UserInterface.AddError($"Failed to parse quantity for {material.name}");
 								SaveInventoryBitmap(quantity, $"{material.name}_Quantity.png");
 							}
-							if (Properties.Settings.Default.LogScreenshots || material.count == 0)
-                            {
+							else if (Properties.Settings.Default.LogScreenshots)
+							{
 								SaveInventoryBitmap(quantity, $"{material.name}_Quantity.png");
-                            }
+							}
 							inventory.Materials.Add(material);
 							UserInterface.ResetCharacterDisplay();
 							UserInterface.SetMaterial(nameplate, quantity, material.name, material.count);
+							quantity.Dispose();   // the UI shows its own copy
 
 							previousMaterial.name = material.name;
 						}

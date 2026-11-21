@@ -967,20 +967,6 @@ namespace InventoryKamera
             return true;
         }
 
-        private string FetchHTML(string url)
-        {
-            try
-            {
-                using (WebClient client = new WebClient())
-                {
-                    client.Encoding = System.Text.Encoding.UTF8;
-                    return client.DownloadString(url);
-                }
-            }
-            catch { throw; }
-
-        }
-
         private string LoadJsonFromFile(string fileName)
         {
             lock (this)

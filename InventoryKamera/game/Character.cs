@@ -36,6 +36,10 @@ namespace InventoryKamera
             }
         }
 
+        // The two mannequins come back from the scan as "Manequin1" and "Manequin2"
+        // (the code's spelling). They're skipped, since Genshin Optimizer doesn't support them.
+        internal static bool IsMannequin(string name) => name == "Manequin1" || name == "Manequin2";
+
         [JsonProperty("level")]
         public int Level { get; internal set; }
 
