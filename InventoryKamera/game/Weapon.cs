@@ -44,8 +44,9 @@ namespace InventoryKamera
 			Rarity = -1;
 		}
 
-		public Weapon(WeaponType _weaponType, string _equippedCharacter)
+		public Weapon(WeaponType _weaponType, string _equippedCharacter, int _id = 0)
 		{
+			Id = _id;
 			WeaponType = _weaponType;
 			Level = 1;
 			Rarity = 1;

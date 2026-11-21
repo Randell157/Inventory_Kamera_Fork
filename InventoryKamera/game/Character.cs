@@ -24,6 +24,18 @@ namespace InventoryKamera
             }
         }
 
+        // GOOD keys every Traveler by element ("TravelerCryo"), but weapon and artifact
+        // locations are always the bare "Traveler". Match equipment against this.
+        [JsonIgnore]
+        public string LocationGOOD
+        {
+            get
+            {
+                string name = NameGOOD;
+                return name != null && name.StartsWith("Traveler") ? "Traveler" : name;
+            }
+        }
+
         [JsonProperty("level")]
         public int Level { get; internal set; }
 

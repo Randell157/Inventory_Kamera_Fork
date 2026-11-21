@@ -554,7 +554,7 @@ namespace InventoryKamera
 			{
 				foreach (Character character in Characters)
 				{
-					if (artifact.EquippedCharacter == character.NameGOOD)
+					if (artifact.EquippedCharacter == character.LocationGOOD)
 					{
 						character.AssignArtifact(artifact); // Do we even need to do this?
 						Logger.Debug("Assigned {fearSlot} to {character}", artifact.GearSlot, character.NameGOOD);
@@ -566,23 +566,34 @@ namespace InventoryKamera
 
 		public void AssignWeapons()
 		{
-			foreach (Character character in Characters)
+			var defaults = AssignWeapons(Characters, equippedWeapons, Inventory.Weapons, character => character.WeaponType);
+			foreach (Weapon weapon in defaults) Inventory.Add(weapon);
+		}
+
+		// Gives each character its scanned weapon. A character whose weapon wasn't scanned
+		// (filtered out by rarity or level) gets a starter weapon instead, numbered after the
+		// scanned weapons so every weapon id stays unique. Returns the starter weapons.
+		internal static List<Weapon> AssignWeapons(IEnumerable<Character> characters, IEnumerable<Weapon> equippedWeapons,
+			IEnumerable<Weapon> scannedWeapons, Func<Character, WeaponType> weaponTypeOf)
+		{
+			int nextId = scannedWeapons.Select(w => w.Id).DefaultIfEmpty(-1).Max() + 1;
+			var defaults = new List<Weapon>();
+
+			foreach (Character character in characters)
 			{
-				foreach (Weapon weapon in equippedWeapons)
+				Weapon weapon = equippedWeapons.FirstOrDefault(w => w.EquippedCharacter == character.LocationGOOD);
+				if (weapon != null)
 				{
-					if (weapon.EquippedCharacter == character.NameGOOD)
-					{
-						character.AssignWeapon(weapon);
-						Logger.Debug("Assigned {weapon} to {character}", weapon.Name, character.NameGOOD);
-						break;
-					}
+					character.AssignWeapon(weapon);
+					Logger.Debug("Assigned {weapon} to {character}", weapon.Name, character.NameGOOD);
 				}
-				if (character.Weapon is null)
+				else
 				{
-					Inventory.Add(new Weapon(character.WeaponType, character.NameGOOD));
+					defaults.Add(new Weapon(weaponTypeOf(character), character.LocationGOOD, nextId++));
 					Logger.Info("Default weapon assigned to {character}", character.NameGOOD);
 				}
 			}
+			return defaults;
 		}
 	}
 }

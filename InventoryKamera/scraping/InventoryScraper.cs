@@ -515,18 +515,44 @@ namespace InventoryKamera
         /// </summary>
         /// <param name="card">Bitmap of the item card</param>
         /// <returns>A bitmap copy of the item card's lock status icon</returns>
-        internal static Bitmap GetLockedBitmap(Bitmap card, bool isSanctified = false)
+        internal static Bitmap GetLockedBitmap(Bitmap card, bool isSanctified = false, bool isWeapon = false)
         {
-            double baseY = Navigation.IsNormal ? 0.353 : 0.309;
-            double sanctifiedShift = Navigation.IsNormal ? 0.0520 : 0.0471;
+            return GenshinProcesor.CopyBitmap(card, LockRegion(card.Size, Navigation.IsNormal, isSanctified, isWeapon));
+        }
+
+        /// <summary>
+        /// Where an item card's lock icon is. Weapon cards have it at the right edge;
+        /// artifact cards have it further left, next to the artifact's mark icon.
+        /// </summary>
+        internal static Rectangle LockRegion(Size card, bool isNormal, bool isSanctified = false, bool isWeapon = false)
+        {
+            double baseY = isNormal ? 0.353 : 0.309;
+            double sanctifiedShift = isNormal ? 0.0520 : 0.0471;
             double yShift = isSanctified ? sanctifiedShift : 0.0;
 
-            return GenshinProcesor.CopyBitmap(card,
-                new Rectangle(
-                    x: (int)(card.Width * 0.75),
-                    y: (int)(card.Height * (baseY + yShift)),
-                    width: (int)(card.Width * 0.0955),
-                    height: (int)(card.Height * (Navigation.IsNormal ? 0.055 : 0.0495))));
+            return new Rectangle(
+                x: (int)(card.Width * (isWeapon ? 0.866 : 0.75)),
+                y: (int)(card.Height * (baseY + yShift)),
+                width: (int)(card.Width * 0.0955),
+                height: (int)(card.Height * (isNormal ? 0.055 : 0.0495)));
+        }
+
+        /// <summary>
+        /// True when the lock crop shows the red padlock of a locked item. An unlocked item shows a grey
+        /// padlock. The box behind the padlock is not used, because when the previous item had the other
+        /// lock state, the box is still fading when the card is captured. The padlock is already drawn.
+        /// </summary>
+        internal static bool IsLockIconRed(Bitmap lockCrop)
+        {
+            int red = 0;
+            for (int y = 0; y < lockCrop.Height; y++)
+                for (int x = 0; x < lockCrop.Width; x++)
+                {
+                    Color c = lockCrop.GetPixel(x, y);
+                    if (c.R >= 150 && c.R - c.G >= 50 && c.R - c.B >= 60) red++;
+                }
+            // A 1920x1080 crop has 327-464 red pixels when locked and 0 when unlocked.
+            return red >= lockCrop.Width * lockCrop.Height / 20;
         }
 
         /// <summary>
