@@ -21,7 +21,8 @@ namespace InventoryKamera
 		internal readonly TextBox TravelerName = new TextBox(), OutputPath = new TextBox();
 		private readonly Button browse = new Button(), scan = new Button(), openFolder = new Button();
 		internal readonly Button OpenOptimizer = new Button();
-		internal readonly Label Status = new Label(), Counts = new Label();
+		internal readonly LinkLabel Status = new LinkLabel();
+		internal readonly Label Counts = new Label();
 		internal readonly ProgressBar Progress = new ProgressBar();
 		internal readonly LinkLabel Errors = new LinkLabel();
 		internal readonly LinkLabel WeaponsLine = new LinkLabel(), ArtifactsLine = new LinkLabel(), CharactersLine = new LinkLabel(), UseStandard = new LinkLabel();
@@ -75,6 +76,8 @@ namespace InventoryKamera
 
 			Status.SetBounds(Edge, 416, Inner, 20);
 			Status.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+			Status.LinkColor = Status.ActiveLinkColor = Status.VisitedLinkColor = UpdatesForm.Blue;
+			Status.LinkClicked += (s, e) => UpdatesForm.ShowFor(this);
 			Controls.Add(Status);
 			Progress.SetBounds(Edge, 438, Inner, 14);
 			Progress.Visible = false;
@@ -115,9 +118,10 @@ namespace InventoryKamera
 			var file = new ToolStripMenuItem("File");
 			file.DropDownItems.Add("Quit", null, (s, e) => Application.Exit());
 			var options = new ToolStripMenuItem("Options");
-			var update = new ToolStripMenuItem("Update Lookup Tables");
-			update.Click += async (s, e) => await AppStartup.UpdateLookupTablesAsync(this);
+			var update = new ToolStripMenuItem("Updates…");
+			update.Click += (s, e) => UpdatesForm.ShowFor(this);
 			options.DropDownItems.Add(update);
+			UpdateMark.Attach(this, options, update);
 			options.DropDownItems.Add("Open Export Folder", null, (s, e) => ScanWindows.OpenFolder(OutputPath.Text));
 			options.DropDownOpening += (s, e) => update.Enabled = !ScanSession.IsRunning;
 			menu.Items.AddRange(new ToolStripItem[] { file, LookMenu.Build(Look.Simple, this), options });
@@ -253,6 +257,13 @@ namespace InventoryKamera
 			// Classic's one-time "New: View → Simple" hint means nothing here.
 			string status = UserInterface.Status == Looks.HintText ? "" : UserInterface.Status;
 			Status.Text = string.IsNullOrEmpty(status) ? "Ready" : status;
+			// "Updates available · Open Updates": the link opens the Updates window (mockup 2A).
+			if (UpdateNotice.IsNoticeText(status))
+			{
+				Status.Text = status + " · " + Updates.OpenLink;
+				Status.LinkArea = new LinkArea(status.Length + 3, Updates.OpenLink.Length);
+			}
+			else Status.LinkArea = new LinkArea(0, 0);
 			Status.ForeColor = string.IsNullOrEmpty(status) || UserInterface.StatusColor.IsEmpty ? SystemColors.ControlText : UserInterface.StatusColor;
 
 			var settings = Properties.Settings.Default;

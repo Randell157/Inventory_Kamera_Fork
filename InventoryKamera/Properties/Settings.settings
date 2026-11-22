@@ -29,6 +29,18 @@
     <Setting Name="LooksHintShown" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
+    <Setting Name="AutoCheckUpdates" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="SkippedAppVersion" Type="System.String" Scope="User">
+      <Value Profile="(Default)"></Value>
+    </Setting>
+    <Setting Name="AppRemindAfter" Type="System.DateTime" Scope="User">
+      <Value Profile="(Default)">1000-01-01</Value>
+    </Setting>
+    <Setting Name="DataRemindAfter" Type="System.DateTime" Scope="User">
+      <Value Profile="(Default)">1000-01-01</Value>
+    </Setting>
     <Setting Name="OutputPath" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>

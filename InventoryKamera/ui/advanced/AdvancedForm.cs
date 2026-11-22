@@ -33,7 +33,8 @@ namespace InventoryKamera
 		internal readonly TextBox TravelerName = new TextBox(), WandererName = new TextBox(), Mannequin1Name = new TextBox(), Mannequin2Name = new TextBox();
 		private readonly Button scan = new Button();
 		internal readonly Button OpenOptimizer = new Button();
-		internal readonly Label Status = new Label(), ErrorTitle = new Label();
+		internal readonly LinkLabel Status = new LinkLabel();
+		internal readonly Label ErrorTitle = new Label();
 		private readonly Label weaponCount = new Label(), weaponMax = new Label(), artifactCount = new Label(), artifactMax = new Label(), characterCount = new Label();
 		private readonly PictureBox gearPicture = new PictureBox(), characterPicture = new PictureBox();
 		private readonly TextBox gearText = new TextBox(), characterText = new TextBox();
@@ -85,9 +86,10 @@ namespace InventoryKamera
 			options.DropDownItems.Add(GameKeys.MenuItem("Character Screen Key", "CharacterKey", "Key to open the character screen", () => (int)Navigation.characterKey));
 			options.DropDownItems.Add(GameKeys.MenuItem("Character Slot 1 Key", "slot1Key", "Key to switch to party slot 1", () => (int)Navigation.slotOneKey));
 			options.DropDownItems.Add(new ToolStripSeparator());
-			var update = new ToolStripMenuItem("Update Lookup Tables");
-			update.Click += async (s, e) => await AppStartup.UpdateLookupTablesAsync(this);
+			var update = new ToolStripMenuItem("Updates…");
+			update.Click += (s, e) => UpdatesForm.ShowFor(this);
 			options.DropDownItems.Add(update);
+			UpdateMark.Attach(this, options, update);
 			options.DropDownItems.Add("Open Export Folder", null, (s, e) => ScanWindows.OpenFolder(OutputPath.Text));
 			options.DropDownItems.Add("Update Executables", null, (s, e) => new ui.ExecutablesForm().Show());
 			options.DropDownOpening += (s, e) => update.Enabled = !ScanSession.IsRunning;
@@ -268,6 +270,8 @@ namespace InventoryKamera
 
 			Status.SetBounds(Right_, 98, RightWidth, 20);
 			Status.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+			Status.LinkColor = Status.ActiveLinkColor = Status.VisitedLinkColor = UpdatesForm.Blue;
+			Status.LinkClicked += (s, e) => UpdatesForm.ShowFor(this);
 			Controls.Add(Status);
 
 			void Row(string text, int y, Label count, Label max)
@@ -459,6 +463,13 @@ namespace InventoryKamera
 			if (IsDisposed) return;
 			string status = UserInterface.Status == Looks.HintText ? "" : UserInterface.Status;
 			Status.Text = string.IsNullOrEmpty(status) ? "Ready" : status;
+			// "Updates available · Open Updates": the link opens the Updates window (mockup 2A).
+			if (UpdateNotice.IsNoticeText(status))
+			{
+				Status.Text = status + " · " + Updates.OpenLink;
+				Status.LinkArea = new LinkArea(status.Length + 3, Updates.OpenLink.Length);
+			}
+			else Status.LinkArea = new LinkArea(0, 0);
 			Status.ForeColor = string.IsNullOrEmpty(status) || UserInterface.StatusColor.IsEmpty ? SystemColors.ControlText : UserInterface.StatusColor;
 			ErrorTitle.Text = AdvancedText.ErrorLog(UserInterface.ErrorCount);
 			weaponCount.Text = UserInterface.Weapons.ToString();

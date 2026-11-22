@@ -109,13 +109,21 @@ namespace InventoryKamera
 		}
 
 		// After the first window appears (not again when switching looks).
+		// Once per launch, after the first window appears. A new install downloads its lookup tables; then,
+		// once a day (Options → Updates… → "Check once a day by itself"), a background check for a newer app
+		// and newer game data. It never pops up: the status line and a dot on Options say what it found.
 		internal static async Task RunChecksAsync(ILookWindow window)
 		{
-			CheckForKameraUpdates();
 			if (Database.TablesMissing)
 				await DownloadMissingTablesAsync(window);   // a new install: the data is the newest there is
-			else
-				CheckForGenshinUpdates(window);
+
+			var settings = Properties.Settings.Default;
+			if (!Updates.CheckDue(settings.AutoCheckUpdates, settings.LastUpdateCheck, DateTime.Now))
+			{
+				Logger.Info(settings.AutoCheckUpdates ? "Update check: last one {0:g}, next after a day" : "Update check: off (checked only with Check now)", settings.LastUpdateCheck);
+				return;
+			}
+			await UpdateNotice.CheckNowAsync();
 		}
 
 		// A new install (or one whose download failed) has no lookup tables. Download them with the window
@@ -155,124 +163,44 @@ namespace InventoryKamera
 			return false;
 		}
 
-		// Options → Update Lookup Tables.
-		internal static async Task UpdateLookupTablesAsync(ILookWindow window)
+		// The Updates window's "Update game data" / "Download again". Runs the download off the window's thread
+		// and reloads the lists; returns what to show instead of a popup.
+		internal static async Task<(bool Ok, string Message)> UpdateGameDataAsync(bool force)
 		{
 			if (Database.TablesMissing)
 			{
-				await DownloadMissingTablesAsync(window);   // the retry the "not downloaded" message points to
-				return;
+				bool got = await DownloadMissingTablesAsync(LookContext.Current?.Window as ILookWindow ?? NoWindow.Instance);
+				return got ? (true, $"✓ Downloaded the game data for {Database.LocalVersion.ToString(2)}.") : (false, "The download didn't finish. See the message for when to try again.");
 			}
 
-			var status = Database.UpdateGameData();
-			switch (status)
-			{
-				case UpdateStatus.Fail:
-					MessageBox.Show("Unable to update game data. Please check the log for more details", "Update failed", buttons: MessageBoxButtons.OK, icon: MessageBoxIcon.Stop);
-					break;
-				case UpdateStatus.Success:
-					GenshinProcesor.ReloadData();
-					window.LookupTablesReloaded();
-					MessageBox.Show($"Update for game version {Database.LocalVersion.ToString(2)} successful.", "Update status", buttons: MessageBoxButtons.OK, icon: MessageBoxIcon.Information);
-					Logger.Info("Updated game date to {0}", Database.LocalVersion.ToString(2));
-					break;
-				case UpdateStatus.Skipped:
-					if (MessageBox.Show($"No update necessary! You are already using the latest game data ({Database.LocalVersion.ToString(2)})." +
-						$" Would you like to force an update?",
-						"Already Up to Date",
-						buttons: MessageBoxButtons.YesNo,
-						icon: MessageBoxIcon.Information) == DialogResult.Yes)
-					{
-						status = Database.UpdateGameData(force: true);
-						switch (status)
-						{
-							case UpdateStatus.Fail:
-								MessageBox.Show("Unable to update game data. Please check the log for more details", "Update failed", buttons: MessageBoxButtons.OK, icon: MessageBoxIcon.Stop);
-								break;
-							default:
-								GenshinProcesor.ReloadData();
-								window.LookupTablesReloaded();
-								MessageBox.Show($"Update for game version {Database.LocalVersion.ToString(2)} successful.", "Update success", buttons: MessageBoxButtons.OK, icon: MessageBoxIcon.Information);
-								Logger.Info("Successfully updated game data to {0}", new DatabaseManager().LocalVersion.ToString(2));
-								break;
-						}
-					}
-					break;
-				default:
-					break;
-			}
-		}
-
-		private static async void CheckForKameraUpdates()
-		{
-			var client = new Octokit.GitHubClient(new Octokit.ProductHeaderValue("Inventory_Kamera"));
-			try
-			{
-				// Latest published, non-prerelease release of this fork.
-				var latest = await client.Repository.Release.GetLatest(ForkRepository.Owner, ForkRepository.Name);
-				Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
-				if (ForkRepository.IsNewerRelease(latest.TagName, currentVersion))
-				{
-					var message = $"A new version of Inventory Kamera is available.\n\n" +
-						$"Current Version: {currentVersion.ToString(3)}\nLatest Version: {latest.TagName}\n\n" +
-						$"Would you like to download the update?";
-					var result = MessageBox.Show(message, "Inventory Kamera Update", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-					if (result == DialogResult.Yes)
-					{
-						Process.Start(new ProcessStartInfo(latest.HtmlUrl) { UseShellExecute = true });
-					}
-				}
-			}
-			catch (Octokit.RateLimitExceededException) { Logger.Warn("Rate limit exceeded checking for Kamera Update!!!! This warning should be resolved in an hour."); }
-			catch (Octokit.NotFoundException) { Logger.Info("No published release of {0}/{1} yet; skipping the update check.", ForkRepository.Owner, ForkRepository.Name); }
-			// Offline, GitHub down, etc.: an update check must never stop the app from starting.
-			catch (Exception ex) { Logger.Warn(ex, "Could not check for Kamera updates."); }
-		}
-
-		private static void CheckForGenshinUpdates(ILookWindow window)
-		{
-			var databaseManager = new DatabaseManager();
-			try
-			{
-				var updatesAvailable = databaseManager.UpdateAvailable();
-				if (updatesAvailable)
-				{
-					var message = "A new version for Genshin Impact has been found. Would you like to update Kamera's lookup tables? (Recommended)";
-					var result = MessageBox.Show(message, "Game Version Update", MessageBoxButtons.YesNo);
-					if (result == DialogResult.Yes)
-					{
-						switch (databaseManager.UpdateGameData())
-						{
-							case UpdateStatus.Fail:
-								MessageBox.Show("Unable to update game data. Please check the log for more details", "Update failed", buttons: MessageBoxButtons.OK, icon: MessageBoxIcon.Stop);
-								break;
-							case UpdateStatus.Success:
-								Database = new DatabaseManager();
-								GenshinProcesor.ReloadData();
-								window.LookupTablesReloaded();
-								MessageBox.Show($"Update for game version {databaseManager.LocalVersion.ToString(2)} successful.", "Update status", buttons: MessageBoxButtons.OK, icon: MessageBoxIcon.Information);
-								Logger.Info("Updated game data to {0}", databaseManager.LocalVersion.ToString(2));
-								break;
-							default:
-								break;
-						}
-					}
-					else if (result == DialogResult.No)
-					{
-						MessageBox.Show("Update skipped. Please know that skipping this update will likely result in incorrect scans.\n" +
-							"\nYou may check for updates again on restarting this application or by using the update manager found" +
-							" under 'options'", "Update declined", MessageBoxButtons.OK);
-					}
-				}
-				else
-					Logger.Info("Current game data is up to date with data for {0}", databaseManager.LocalVersion.ToString(2));
-			}
+			UpdateStatus status;
+			DatabaseManager.RetryAfterUtc = null;
+			try { status = await Task.Run(() => Database.UpdateGameData(force)); }
 			catch (Exception ex)
 			{
-				Logger.Warn(ex, "Could not check for list updates");
-				MessageBox.Show("Could not check for updates. Consider trying again in an hour or so.", "Game Version Update", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				Logger.Error(ex, "Game data update failed");
+				status = UpdateStatus.Fail;
 			}
-			Properties.Settings.Default.LastUpdateCheck = DateTime.Now;
+			if (status == UpdateStatus.Fail)
+				return (false, DatabaseManager.RetryAfterUtc == null
+					? "Couldn't update the game data. The log has the details."
+					: FirstDownload.FailTextFor(DatabaseManager.RetryAfterUtc));
+
+			Database = new DatabaseManager();   // picks up the new version.txt
+			GenshinProcesor.ReloadData();
+			(LookContext.Current?.Window as ILookWindow)?.LookupTablesReloaded();
+			string version = Database.LocalVersion.ToString(2);
+			Logger.Info("Game data {0}: {1}", status == UpdateStatus.Skipped ? "already up to date" : "updated", version);
+			return (true, status == UpdateStatus.Skipped ? $"✓ Already up to date ({version})." : $"✓ Updated to game data {version}.");
+		}
+
+		// For the rare download with no look window to tell (tests).
+		private sealed class NoWindow : ILookWindow
+		{
+			internal static readonly NoWindow Instance = new NoWindow();
+			public void LookupTablesReloaded() { }
+			public void BecameShown() { }
+			public void BecameHidden() { }
 		}
 	}
 }

@@ -86,7 +86,7 @@ namespace InventoryKamera.Tests
             var us = System.Globalization.CultureInfo.GetCultureInfo("en-US");
             var now = new System.DateTime(2026, 11, 21, 18, 29, 15);
             string text = FirstDownload.FailTextFor(new System.DateTime(2026, 11, 21, 18, 59, 50), now, us);
-            StringAssert.EndsWith(text, "Try again after 7:00 PM: Options → Update Lookup Tables.");
+            StringAssert.EndsWith(text, "Try again after 7:00 PM: Options → Updates.");
             StringAssert.Contains(text, "GitLab limits how much can be downloaded without an account and asked Inventory Kamera to wait.");
             StringAssert.Contains(FirstDownload.FailTextFor(new System.DateTime(2026, 11, 21, 19, 0, 0), now, us), "after 7:00 PM:", "a whole minute stays");
             StringAssert.Contains(FirstDownload.FailTextFor(new System.DateTime(2026, 11, 22, 0, 30, 0), now, us), "after 11/22/2026 12:30 AM:", "another day names the date");
@@ -129,7 +129,7 @@ namespace InventoryKamera.Tests
             Assert.AreEqual("New game data", FirstDownload.SuccessTitle);
             Assert.AreEqual("Lookup tables not downloaded", FirstDownload.FailTitle);
             StringAssert.Contains(FirstDownload.FailText, "Scans won't work until the data is downloaded.");
-            StringAssert.EndsWith(FirstDownload.FailText, "Try again in a few minutes: Options → Update Lookup Tables.");
+            StringAssert.EndsWith(FirstDownload.FailText, "Try again in a few minutes: Options → Updates.");
             Assert.AreEqual("Downloading lookup tables…", FirstDownload.Status);
         }
     }

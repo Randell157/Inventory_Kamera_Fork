@@ -48,6 +48,8 @@ namespace InventoryKamera
             AddZeroMeansAllHints();
             // View -> Simple / Advanced / Classic and Zoom, between File and Options.
             menuStrip1.Items.Insert(menuStrip1.Items.IndexOf(fileToolStripMenuItem) + 1, LookMenu.Build(Look.Classic, this));
+            DatabaseUpdateMenuItem.Text = "Updates…";
+            UpdateMark.Attach(this, keysToolStripMenuItem, DatabaseUpdateMenuItem);
         }
 
         // The status, counters, images and error log of a scan show in this window's controls.
@@ -358,10 +360,8 @@ namespace InventoryKamera
         // Options -> Inventory / Character Screen / Character Slot 1 key (shared with Advanced: GameKeys).
         private void OptionsMenuItem_KeyDown(object sender, KeyEventArgs e) => GameKeys.KeyDown(sender, e);
 
-        private async void DatabaseUpdateMenuItem_Click(object sender, EventArgs e)
-        {
-            await AppStartup.UpdateLookupTablesAsync(this);
-        }
+        // Options -> Updates... (1.7): the app and the game data in one window.
+        private void DatabaseUpdateMenuItem_Click(object sender, EventArgs e) => UpdatesForm.ShowFor(this);
 
 
         private void ExportFolderMenuItem_Click(object sender, EventArgs e)

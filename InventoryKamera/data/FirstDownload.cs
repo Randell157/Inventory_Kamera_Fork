@@ -30,7 +30,7 @@ namespace InventoryKamera
 		// Offline, or GitLab gave no time.
 		internal const string FailText = FailHead +
 			"GitLab may be busy (it limits how often it can be asked) or you may be offline. Scans won't work until the data is downloaded.\n\n" +
-			"Try again in a few minutes: Options → Update Lookup Tables.";
+			"Try again in a few minutes: Options → Updates.";
 
 		// With the time GitLab asked to wait until (DatabaseManager.RetryAfterUtc), when it's still ahead.
 		internal static string FailTextFor(DateTime? retryAfterUtc) =>
@@ -51,7 +51,7 @@ namespace InventoryKamera
 			string when = at.ToString(at.Date == nowLocal.Date ? "t" : "g", culture);
 			return FailHead +
 				"GitLab limits how much can be downloaded without an account and asked Inventory Kamera to wait. Scans won't work until the data is downloaded.\n\n" +
-				"Try again after " + when + ": Options → Update Lookup Tables.";
+				"Try again after " + when + ": Options → Updates.";
 		}
 	}
 }

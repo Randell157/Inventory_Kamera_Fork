@@ -130,6 +130,54 @@ namespace InventoryKamera.Properties {
                 this["LooksHintShown"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool AutoCheckUpdates {
+            get {
+                return ((bool)(this["AutoCheckUpdates"]));
+            }
+            set {
+                this["AutoCheckUpdates"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string SkippedAppVersion {
+            get {
+                return ((string)(this["SkippedAppVersion"]));
+            }
+            set {
+                this["SkippedAppVersion"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1000-01-01")]
+        public global::System.DateTime AppRemindAfter {
+            get {
+                return ((global::System.DateTime)(this["AppRemindAfter"]));
+            }
+            set {
+                this["AppRemindAfter"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1000-01-01")]
+        public global::System.DateTime DataRemindAfter {
+            get {
+                return ((global::System.DateTime)(this["DataRemindAfter"]));
+            }
+            set {
+                this["DataRemindAfter"] = value;
+            }
+        }
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]

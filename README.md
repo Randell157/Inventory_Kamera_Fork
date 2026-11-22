@@ -96,15 +96,15 @@ Inventory Kamera uses lists of valid items and characters to assist with text re
 
 ### Updating automatically
 
-A notification window will appear when starting the application and a new version of Genshin game data is found. Inventory Kamera syncs with [Dimbreath's Anime Game Data Repo](https://gitlab.com/Dimbreath/AnimeGameData) for new game versions. Big thanks for all the hard work done there.
+Once a day, when the application starts, Inventory Kamera checks for a newer version of itself and of the Genshin game data. If it finds one, the status line says so and `Options` shows a blue dot; nothing pops up. Inventory Kamera syncs with [Dimbreath's Anime Game Data Repo](https://gitlab.com/Dimbreath/AnimeGameData) for new game versions. Big thanks for all the hard work done there.
 
-If the update window does not show up when the applications starts, you can select `Update Lookup Tables` under `Options` to run the automatic updater. You may optionally force the updater to run if it does not detect a new Genshin Impact version. A normal update also refreshes characters already in your lists, so corrected game data reaches older installs too.
+Open `Updates…` under `Options` to see what's new, read the release notes, and update the game data (or check right away with `Check now`). `Download again` forces the game data download when no new Genshin Impact version is detected. A normal update also refreshes characters already in your lists, so corrected game data reaches older installs too.
 
 ### Updating manually
 
 > **Warning**
 > 
-> This option should only be necessary if Inventory Kamera's `Update Lookup Tables` reports an error or the generated ouputs are invalid.
+> This option should only be necessary if Inventory Kamera's game data update (`Options` → `Updates…`) reports an error or the generated ouputs are invalid.
 
 The materials and weapons lists are kept in a simple key:value JSON-readable format. 'value' is the name of an item in [PascalCase](<https://en.wikipedia.org/wiki/Naming_convention_(programming)#Examples_of_multiple-word_identifier_formats>) and 'key' is whatever 'value' is but in lowercase. 
 
