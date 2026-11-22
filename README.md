@@ -9,6 +9,8 @@ This scanner exports in `.GOOD`, a JSON-based exporting format, which allows you
 ## Download
 [LATEST DOWNLOAD HERE](https://github.com/Randell157/Inventory_Kamera_Fork/releases/latest) <- CLICK ME NOT THE "CODE" BUTTON NEAR THE TOP OF THIS PAGE
 
+**Tested with Genshin Impact 7.2** (Inventory Kamera 1.6.0, November 2026): full scans of weapons, artifacts, characters, materials and character development items at 1920×1080.
+
 ## DISCORD
 The Discord server of the original Inventory Kamera project (not run by this fork): https://discord.gg/zh56aVWe3U
 
