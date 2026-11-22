@@ -116,7 +116,6 @@ namespace InventoryKamera.Tests
                         Assert.IsTrue(System.Windows.Forms.TextRenderer.MeasureText(line, font).Width <= UserInterface.StatusWidth, line);
                     Assert.IsTrue(System.Windows.Forms.TextRenderer.MeasureText(text, font).Height <= UserInterface.StatusHeight, text);
                 }
-                System.Console.WriteLine("FIT " + text.Replace("\n", " / "));
             }
         }
 
