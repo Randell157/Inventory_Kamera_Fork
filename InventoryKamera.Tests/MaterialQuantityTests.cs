@@ -182,10 +182,74 @@ namespace InventoryKamera.Tests
                 .Invoke(null, new object[] { image, PageSegMode.SingleLine, numbersOnly })).Trim();
         }
 
-        private static int ParseQuantity(params string[] readings)
+        [TestMethod]
+        [Description("Item 19: an unclear pass is read again on the enlarged crop")]
+        public void UnclearPassIsReadAgainEnlarged()
+        {
+            // Deathly Statuette, 21-Nov: "", 1, 1, 11, 11 on the crop; enlarged 1.25x it reads 11 five times.
+            Assert.AreEqual(11, ParseQuantity("", "1", "1", "11", "11", "11", "11", "11", "11", "11"));
+        }
+
+        [TestMethod]
+        [Description("Item 19: if every pass ties, the count stays unknown")]
+        public void TieInEveryPassStaysUnknown()
+        {
+            Assert.AreEqual(0, ParseQuantity(out int reads, "62", "8", "62", "8", "", "62", "8", "62", "8", "", "62", "8", "62", "8", ""));
+            Assert.AreEqual(15, reads, "the crop, 1.25x and 1.5x");
+        }
+
+        [TestMethod]
+        [Description("Item 19: a clear first pass needs no second one")]
+        public void ClearReadingsUseOnePass()
+        {
+            Assert.AreEqual(62, ParseQuantity(out int reads, "62", "62", "62", "8", "8", "999", "999", "999", "999", "999"));
+            Assert.AreEqual(5, reads);
+            Assert.AreEqual(11, ParseQuantity(out reads, "", "1", "1", "11", "11", "11", "11", "11", "11", "11"));
+            Assert.AreEqual(10, reads, "an unclear pass takes one more, at 1.25x");
+        }
+
+        [TestMethod]
+        [Description("19b: small specks are removed, the digits are kept")]
+        public void SpecksAreRemovedDigitsKept()
+        {
+            using (var image = RenderText("52"))
+            {
+                // Two frame specks near the bottom corners, as in the 21-Nov crops.
+                foreach (var x in new[] { 3, image.Width - 4 })
+                    for (int dy = 0; dy < 2; dy++) image.SetPixel(x, image.Height - 3 + dy, Color.Black);
+                int inkBefore = InkPixels(image);
+
+                int removed = MaterialScraper.RemoveSpecks(image);
+
+                Assert.AreEqual(4, removed, "both specks, 2 px each");
+                Assert.AreEqual(Color.White.ToArgb(), image.GetPixel(3, image.Height - 3).ToArgb());
+                Assert.AreEqual(inkBefore - 4, InkPixels(image), "every digit pixel stays");
+                Assert.AreEqual(0, MaterialScraper.RemoveSpecks(image), "nothing left to remove");
+            }
+        }
+
+        private static int InkPixels(Bitmap image)
+        {
+            int ink = 0;
+            for (int y = 0; y < image.Height; y++)
+                for (int x = 0; x < image.Width; x++)
+                    if (image.GetPixel(x, y).R < 160) ink++;
+            return ink;
+        }
+
+        private static int ParseQuantity(params string[] readings) => ParseQuantity(out _, readings);
+
+        private static int ParseQuantity(out int reads, params string[] readings)
         {
             var pending = new System.Collections.Generic.Queue<string>(readings);
-            Func<Bitmap, string> recognize = image => pending.Count == 0 ? "" : pending.Dequeue();
+            int calls = 0;
+            Func<Bitmap, string> recognize = image => { calls++; return pending.Count == 0 ? "" : pending.Dequeue(); };
+            try { return ParseQuantityWith(recognize); }
+            finally { reads = calls; }
+        }
+
+        private static int ParseQuantityWith(Func<Bitmap, string> recognize)
+        {
             var scraper = typeof(MainForm).Assembly.GetType("InventoryKamera.MaterialScraper", true);
             using (var image = new Bitmap(120, 40))
             {

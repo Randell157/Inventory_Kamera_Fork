@@ -346,6 +346,24 @@ namespace InventoryKamera
                         ? GenshinProcesor.AnalyzeText(image, Tesseract.PageSegMode.SingleWord, true)
                         : text;
                 };
+
+            int count = ParseMaterialCountOnce(bm, analyzeText);
+            // No clear winner (e.g. "", 1, 1, 11, 11: thin digits run together): read the crop again
+            // enlarged before the digits are cut out, which keeps them apart. Each pass is judged on
+            // its own; a real disagreement still ends as unknown. A clipped glyph (-1) isn't retried.
+            foreach (double enlarge in new[] { 1.25, 1.5 })
+            {
+                if (count != 0) break;
+                Logger.Debug("Quantity unclear; reading again at {0}x", enlarge);
+                using (var larger = GenshinProcesor.ResizeImage(bm, (int)(bm.Width * enlarge), (int)(bm.Height * enlarge)))
+                    count = ParseMaterialCountOnce(larger, analyzeText);
+            }
+            return Math.Max(count, 0);
+        }
+
+        // One pass: the clear winner of five OCR sizes, 0 when unclear, -1 when a glyph is clipped.
+        private static int ParseMaterialCountOnce(Bitmap bm, Func<Bitmap, string> analyzeText)
+        {
             var counts = new Dictionary<int, int>();
 
             // Locate the pale quantity strip, independently of capture height and display scale.
@@ -407,12 +425,16 @@ namespace InventoryKamera
                     }
                     else
                     {
-                        if (runStart > 0) return 0;
+                        if (runStart > 0) return -1;
                         runStart = -1;
                     }
                 }
 
-                for (double scale = 2; scale <= 4; scale += 0.5)
+                // Tiny frame specks near the bottom corners make single-line OCR drop the last digit
+                // ("52" read as "5"); remove them before reading.
+                RemoveSpecks(digits);
+
+                void ReadAt(double scale)
                 {
                     using (var resized = GenshinProcesor.ResizeImage(digits,
                         (int)(digits.Width * scale), (int)(digits.Height * scale)))
@@ -431,8 +453,59 @@ namespace InventoryKamera
                             counts[value] = counts.TryGetValue(value, out int votes) ? votes + 1 : 1;
                     }
                 }
+
+                for (double scale = 2; scale <= 4; scale += 0.5) ReadAt(scale);
             }
 
+            return ClearWinner(counts);
+        }
+
+        // Whitens every ink blob (8-connected, R < 160) smaller than a tenth of the largest one, so
+        // only the digits are left. Returns how many pixels were whitened.
+        internal static int RemoveSpecks(Bitmap image)
+        {
+            int w = image.Width, h = image.Height;
+            var label = new int[w, h];
+            var sizes = new List<int> { 0 };
+            var stack = new Stack<Point>();
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    if (label[x, y] != 0 || image.GetPixel(x, y).R >= 160) continue;
+                    int id = sizes.Count, size = 0;
+                    label[x, y] = id;
+                    stack.Push(new Point(x, y));
+                    while (stack.Count > 0)
+                    {
+                        var p = stack.Pop();
+                        size++;
+                        for (int dy = -1; dy <= 1; dy++)
+                            for (int dx = -1; dx <= 1; dx++)
+                            {
+                                int nx = p.X + dx, ny = p.Y + dy;
+                                if (nx < 0 || ny < 0 || nx >= w || ny >= h || label[nx, ny] != 0) continue;
+                                if (image.GetPixel(nx, ny).R >= 160) continue;
+                                label[nx, ny] = id;
+                                stack.Push(new Point(nx, ny));
+                            }
+                    }
+                    sizes.Add(size);
+                }
+
+            int largest = sizes.Max(), removed = 0;
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                    if (label[x, y] != 0 && sizes[label[x, y]] * 10 < largest)
+                    {
+                        image.SetPixel(x, y, Color.White);
+                        removed++;
+                    }
+            return removed;
+        }
+
+        // The most common reading, if it was read at least twice and nothing else was read as often; else 0.
+        private static int ClearWinner(Dictionary<int, int> counts)
+        {
             var winners = counts.OrderByDescending(entry => entry.Value).ToList();
             if (winners.Count == 0 || winners[0].Value < 2
                 || (winners.Count > 1 && winners[0].Value == winners[1].Value)) return 0;

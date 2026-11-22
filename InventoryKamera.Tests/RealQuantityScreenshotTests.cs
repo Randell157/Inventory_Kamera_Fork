@@ -27,12 +27,20 @@ namespace InventoryKamera.Tests
             isolation?.RestoreGlobalsAndRemoveOwnSandbox();
         }
 
-        // True counts from the user's 6-Nov scans; each image shows "37".
+        // True counts from the user's 6-Nov scans (each shows "37") and the 21-Nov full scan
+        // (Deathly Statuette shows "11"; its small sizes read "", 1, 1, 11, 11 — item 19).
         [DataTestMethod]
         [DataRow("DandelionSeed_Quantity.png", 37)]
         [DataRow("PineAmber_Quantity.png", 37)]
         [DataRow("SkysplitGembloom_Quantity.png", 37)]
         [DataRow("Trishiraite_Quantity.png", 37)]
+        [DataRow("DeathlyStatuette_Quantity.png", 11)]
+        // 21-Nov 16:57 scan: frame specks near the bottom corners made these read one digit short (19b).
+        [DataRow("LightlessMass_Quantity-short.png", 71)]
+        [DataRow("ErodedHorn_Quantity-short.png", 52)]
+        [DataRow("DeathlyStatuette_Quantity-short.png", 11)]
+        [DataRow("PrecisionDriveShaft_Quantity-short.png", 12)]
+        [DataRow("ConcealedClaw_Quantity-ok.png", 989)]
         public void ReadsTheRealCount(string file, int expected)
         {
             Assert.AreEqual(expected, Parse(file), file);
