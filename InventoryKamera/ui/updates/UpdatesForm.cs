@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -20,9 +21,13 @@ namespace InventoryKamera
 		private readonly Func<Task<UpdateResult>> check;
 		private readonly Func<bool, Task<(bool Ok, string Message)>> updateGameData;
 		private readonly Func<DateTime> now;
+		private readonly Func<UpdateResult, IProgress<string>, Task> install;
+		private readonly Func<string, bool> confirm;
+		private readonly Action restart;
 
 		// Inventory Kamera
-		internal readonly Label AppBadge = Badge(), AppYouHave = new Label(), AppLatest = new Label(), AppMessage = new Label(), AppHint = new Label();
+		internal readonly Label AppBadge = Badge(), AppYouHave = new Label(), AppLatest = new Label(), AppMessage = new Label();
+		internal readonly LinkLabel AppHint = new LinkLabel();   // under the buttons: what Update does, then its progress or why it stopped
 		internal readonly TextBox Notes = new TextBox();
 		internal readonly Button Skip = new Button(), AppLater = new Button(), UpdateApp = new Button();
 		// Game data
@@ -37,13 +42,18 @@ namespace InventoryKamera
 		internal UpdateResult Result { get; private set; }
 		internal bool Busy { get; private set; }
 
-		public UpdatesForm() : this(() => UpdateNotice.CheckNowAsync(), AppStartup.UpdateGameDataAsync, () => DateTime.Now) { }
+		public UpdatesForm() : this(() => UpdateNotice.CheckNowAsync(), AppStartup.UpdateGameDataAsync, () => DateTime.Now,
+			(release, progress) => SelfUpdate.InstallAsync(release, Application.StartupPath, progress), null, RestartApp) { }
 
-		internal UpdatesForm(Func<Task<UpdateResult>> check, Func<bool, Task<(bool Ok, string Message)>> updateGameData, Func<DateTime> now)
+		internal UpdatesForm(Func<Task<UpdateResult>> check, Func<bool, Task<(bool Ok, string Message)>> updateGameData, Func<DateTime> now,
+			Func<UpdateResult, IProgress<string>, Task> install = null, Func<string, bool> confirm = null, Action restart = null)
 		{
 			this.check = check;
 			this.updateGameData = updateGameData;
 			this.now = now;
+			this.install = install;
+			this.confirm = confirm ?? (text => MessageBox.Show(this, text, "Update Inventory Kamera", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK);
+			this.restart = restart;
 
 			SuspendLayout();
 			AutoScaleDimensions = new SizeF(96F, 96F);
@@ -53,7 +63,7 @@ namespace InventoryKamera
 			MaximizeBox = MinimizeBox = false;
 			ShowInTaskbar = false;
 			StartPosition = FormStartPosition.CenterParent;
-			ClientSize = new Size(504, 472);
+			ClientSize = new Size(504, 488);
 			Text = "Updates";
 
 			BuildApp();
@@ -114,7 +124,7 @@ namespace InventoryKamera
 
 		private void BuildApp()
 		{
-			var app = Section("Inventory Kamera", AppBadge, new Rectangle(10, 10, 484, 254));
+			var app = Section("Inventory Kamera", AppBadge, new Rectangle(10, 10, 484, 270));
 			Pair(app, "You have", AppYouHave, 36);
 			Pair(app, "Latest", AppLatest, 56);
 			Notes.Multiline = true;
@@ -136,18 +146,18 @@ namespace InventoryKamera
 			UpdateApp.Text = "Update…";
 			UpdateApp.SetBounds(392, 198, 80, 28);
 			Primary(UpdateApp);
-			UpdateApp.Click += (s, e) => OpenRelease();
+			UpdateApp.Click += async (s, e) => await InstallAppAsync();
 			app.Controls.AddRange(new Control[] { Skip, AppLater, UpdateApp });
-			AppHint.Text = "Update opens the release page to download it.";
-			AppHint.ForeColor = SystemColors.GrayText;
-			AppHint.TextAlign = ContentAlignment.TopRight;
-			AppHint.SetBounds(10, 230, 462, 18);
+			AppHint.SetBounds(10, 230, 462, 34);
+			AppHint.LinkColor = AppHint.ActiveLinkColor = AppHint.VisitedLinkColor = Blue;
+			AppHint.LinkClicked += (s, e) => OpenRelease();
+			Hint(UpdateHint, SystemColors.GrayText);
 			app.Controls.Add(AppHint);
 		}
 
 		private void BuildData()
 		{
-			var data = Section("Game data", DataBadge, new Rectangle(10, 274, 484, 146));
+			var data = Section("Game data", DataBadge, new Rectangle(10, 290, 484, 146));
 			Pair(data, "Lookup tables", DataHave, 36);
 			Pair(data, "Newest", DataNewest, 56);
 			DataMessage.SetBounds(10, 80, 462, 34);
@@ -169,20 +179,20 @@ namespace InventoryKamera
 
 		private void BuildFooter()
 		{
-			LastChecked.SetBounds(10, 432, 170, 18);
+			LastChecked.SetBounds(10, 448, 170, 18);
 			LastChecked.ForeColor = SystemColors.GrayText;
 			Controls.Add(LastChecked);
 			Daily.Text = "Check once a day by itself";
 			Daily.AutoSize = true;
-			Daily.Location = new Point(10, 450);
+			Daily.Location = new Point(10, 466);
 			Daily.DataBindings.Add(new Binding("Checked", Settings, "AutoCheckUpdates", true, DataSourceUpdateMode.OnPropertyChanged));
 			Controls.Add(Daily);
 			CheckNow.Text = "Check now";
-			CheckNow.SetBounds(324, 434, 90, 28);
+			CheckNow.SetBounds(324, 450, 90, 28);
 			CheckNow.Click += async (s, e) => await RunCheckAsync();
 			Controls.Add(CheckNow);
 			Close_.Text = "Close";
-			Close_.SetBounds(420, 434, 74, 28);
+			Close_.SetBounds(420, 450, 74, 28);
 			Close_.DialogResult = DialogResult.Cancel;
 			Controls.Add(Close_);
 			CancelButton = Close_;
@@ -206,6 +216,7 @@ namespace InventoryKamera
 			Notes.Text = appNew ? result.Notes : "";
 			Notes.Visible = appNew;
 			Skip.Visible = AppLater.Visible = UpdateApp.Visible = AppHint.Visible = appNew;
+			if (appNew) Hint(UpdateHint, SystemColors.GrayText);
 			Skip.Enabled = !skipped;
 			AppMessage.Visible = !appNew;
 			if (result == null) Message(AppMessage, "Checking…", SystemColors.GrayText);
@@ -292,6 +303,92 @@ namespace InventoryKamera
 			AppMessage.Visible = true;
 			AppBadge.Visible = false;
 		}
+
+		#region One-click update (step 6)
+
+		internal const string UpdateHint = "Downloads it from GitHub, checks it, installs it and restarts.";
+		internal const string ReleasePageLink = "Open the release page";
+
+		internal static string ConfirmText(UpdateResult release) =>
+			$"Download {release.Latest?.ToString(3) ?? release.LatestTag} ({SelfUpdate.SizeText(release.AssetSize)}), check it, replace this version and restart Inventory Kamera?" +
+			Environment.NewLine + Environment.NewLine + "Your settings, game data, logs and exports are kept.";
+
+		// The line under the buttons; a refusal ends with a link to the release page (manual download).
+		private void Hint(string text, Color color, bool withReleaseLink = false)
+		{
+			AppHint.TextAlign = withReleaseLink ? ContentAlignment.TopLeft : ContentAlignment.TopRight;
+			AppHint.Text = withReleaseLink ? text + " " + ReleasePageLink : text;
+			AppHint.LinkArea = withReleaseLink ? new LinkArea(text.Length + 1, ReleasePageLink.Length) : new LinkArea(0, 0);
+			AppHint.ForeColor = color;
+		}
+
+		internal bool Restarting { get; private set; }
+
+		// Update…: confirm, then download, check, install and restart; or say why not (nothing replaced).
+		internal async Task InstallAppAsync()
+		{
+			if (Result == null || ScanSession.IsRunning) return;
+			try { SelfUpdate.CheckRelease(Result); }
+			catch (UpdateRefused refused) { Refuse(refused.Message); return; }
+			if (!confirm(ConfirmText(Result))) return;
+
+			SetBusy(true);
+			UpdateApp.Enabled = Skip.Enabled = AppLater.Enabled = false;
+			Hint("Starting the download…", Color.FromArgb(146, 64, 14));
+			var progress = new OnWindow(this, text => Hint(text, Color.FromArgb(146, 64, 14)));
+			try
+			{
+				await install(Result, progress);
+				Hint("Installed. Restarting…", Green);
+				Logger.Info("Update to {0} installed; restarting", Result.LatestTag);
+				Restarting = true;
+				restart?.Invoke();
+			}
+			catch (UpdateRefused refused) { Refuse(refused.Message); }
+			catch (Exception ex)
+			{
+				Logger.Error(ex, "Update failed");
+				Refuse("The update didn't work (" + ex.Message + "). Nothing was changed.");
+			}
+			finally
+			{
+				if (!Restarting)
+				{
+					SetBusy(false);
+					UpdateApp.Enabled = AppLater.Enabled = true;
+					Skip.Enabled = !Equals(Updates.TagVersion(Settings.SkippedAppVersion), Result.Latest);
+				}
+			}
+		}
+
+		private void Refuse(string why)
+		{
+			Logger.Warn("Update not installed: {0}", why);
+			Hint(why, Red, withReleaseLink: true);
+		}
+
+		// Progress reported from the download, shown on the window's thread.
+		private sealed class OnWindow : IProgress<string>
+		{
+			private readonly Control window;
+			private readonly Action<string> show;
+			internal OnWindow(Control window, Action<string> show) { this.window = window; this.show = show; }
+			public void Report(string value)
+			{
+				if (window.IsDisposed) return;
+				if (window.InvokeRequired) window.BeginInvoke((MethodInvoker)(() => show(value)));
+				else show(value);
+			}
+		}
+
+		// Starts the new exe (it inherits this one's administrator rights, so no second prompt) and closes this one.
+		private static void RestartApp()
+		{
+			Process.Start(new ProcessStartInfo(Path.Combine(Application.StartupPath, SelfUpdate.ExeName)) { WorkingDirectory = Application.StartupPath, UseShellExecute = false });
+			Application.Exit();
+		}
+
+		#endregion One-click update (step 6)
 
 		private void OpenRelease()
 		{

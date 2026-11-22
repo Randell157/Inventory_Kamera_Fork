@@ -17,6 +17,11 @@ namespace InventoryKamera
 		internal string ReleaseUrl;
 		internal string AppError;   // null when the check worked
 
+		// The release's zip (step 6: one-click update).
+		internal string AssetUrl;
+		internal long AssetSize;
+		internal string AssetDigest;   // GitHub's "sha256:…"
+
 		// The game data (lookup tables).
 		internal Version DataLocal;
 		internal Version DataRemote;
@@ -27,11 +32,19 @@ namespace InventoryKamera
 		internal bool DataNewer => DataError == null && DataRemote != null && DataLocal != null && DataRemote > DataLocal;
 	}
 
+	// The latest release as GitHub describes it.
+	internal sealed class ReleaseInfo
+	{
+		internal string Tag, Notes, Url, AssetUrl, AssetDigest;
+		internal DateTime? Published;
+		internal long AssetSize;
+	}
+
 	// Where a check gets its answers; the real one asks GitHub and GitLab, tests use canned answers.
 	internal interface IUpdateSource
 	{
 		Version Current { get; }
-		Task<(string Tag, DateTime? Published, string Notes, string Url)> LatestReleaseAsync();
+		Task<ReleaseInfo> LatestReleaseAsync();
 		Version LocalGameData { get; }
 		Task<Version> RemoteGameDataAsync();
 	}
@@ -107,11 +120,14 @@ namespace InventoryKamera
 			var result = new UpdateResult { CheckedAt = now, Current = source.Current, DataLocal = source.LocalGameData };
 			try
 			{
-				var (tag, published, notes, url) = await source.LatestReleaseAsync();
-				result.LatestTag = tag;
-				result.Published = published;
-				result.Notes = PlainNotes(notes);
-				result.ReleaseUrl = url;
+				var release = await source.LatestReleaseAsync();
+				result.LatestTag = release.Tag;
+				result.Published = release.Published;
+				result.Notes = PlainNotes(release.Notes);
+				result.ReleaseUrl = release.Url;
+				result.AssetUrl = release.AssetUrl;
+				result.AssetSize = release.AssetSize;
+				result.AssetDigest = release.AssetDigest;
 			}
 			catch (Exception ex) { result.AppError = AppErrorText(ex); }
 			try { result.DataRemote = await source.RemoteGameDataAsync(); }
@@ -120,12 +136,19 @@ namespace InventoryKamera
 		}
 
 		internal static string AppErrorText(Exception ex) =>
-			ex is Octokit.RateLimitExceededException ? "GitHub asked to wait (too many checks from this network). Try again in an hour."
-			: ex is Octokit.NotFoundException ? "No release published yet."
+			ex is GitHubAnswer answer && (answer.Status == 403 || answer.Status == 429) ? "GitHub asked to wait (too many checks from this network). Try again in an hour."
+			: ex is GitHubAnswer missing && missing.Status == 404 ? "No release published yet."
 			: "Couldn't reach GitHub (" + Short(ex) + "). Try Check now later.";
 
 		private static string Short(Exception ex) =>
 			ex is System.Net.Http.HttpRequestException || ex is System.Net.WebException ? "no internet?" : ex.GetType().Name.Replace("Exception", "").ToLowerInvariant();
+	}
+
+	// GitHub answered, but not with a release (403 rate limit, 404 none yet...).
+	internal sealed class GitHubAnswer : Exception
+	{
+		internal readonly int Status;
+		internal GitHubAnswer(int status) : base("GitHub answered " + status) { Status = status; }
 	}
 
 	// The real source: this fork's latest GitHub release and the GitLab game data. One small request each.
@@ -133,11 +156,41 @@ namespace InventoryKamera
 	{
 		public Version Current => System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
 
-		public async Task<(string Tag, DateTime? Published, string Notes, string Url)> LatestReleaseAsync()
+		// GitHub's own JSON (the Octokit version here predates the assets' "digest" field).
+		public async Task<ReleaseInfo> LatestReleaseAsync()
 		{
-			var client = new Octokit.GitHubClient(new Octokit.ProductHeaderValue("Inventory_Kamera"));
-			var latest = await client.Repository.Release.GetLatest(ForkRepository.Owner, ForkRepository.Name);
-			return (latest.TagName, latest.PublishedAt?.UtcDateTime, latest.Body, latest.HtmlUrl);
+			using (var http = new System.Net.Http.HttpClient())
+			{
+				http.DefaultRequestHeaders.UserAgent.ParseAdd("Inventory_Kamera");
+				http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+				var response = await http.GetAsync($"https://api.github.com/repos/{ForkRepository.Owner}/{ForkRepository.Name}/releases/latest");
+				if (!response.IsSuccessStatusCode) throw new GitHubAnswer((int)response.StatusCode);
+				return Parse(await response.Content.ReadAsStringAsync());
+			}
+		}
+
+		// The release and its first .zip asset.
+		internal static ReleaseInfo Parse(string json)
+		{
+			var release = Newtonsoft.Json.Linq.JObject.Parse(json);
+			var info = new ReleaseInfo
+			{
+				Tag = (string)release["tag_name"],
+				Notes = (string)release["body"],
+				Url = (string)release["html_url"],
+				Published = (DateTime?)release["published_at"],
+			};
+			if (info.Published != null) info.Published = DateTime.SpecifyKind(info.Published.Value.ToUniversalTime(), DateTimeKind.Utc);
+			foreach (var asset in release["assets"] ?? new Newtonsoft.Json.Linq.JArray())
+			{
+				string name = (string)asset["name"] ?? "";
+				if (!name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) continue;
+				info.AssetUrl = (string)asset["browser_download_url"];
+				info.AssetSize = (long?)asset["size"] ?? 0;
+				info.AssetDigest = (string)asset["digest"];
+				break;
+			}
+			return info;
 		}
 
 		public Version LocalGameData => AppStartup.Database?.LocalVersion;

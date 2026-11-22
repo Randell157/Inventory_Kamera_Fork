@@ -119,6 +119,7 @@
     <Compile Include="ui\updates\Updates.cs" />
     <Compile Include="ui\updates\UpdateNotice.cs" />
     <Compile Include="ui\updates\UpdatesForm.cs" />
+    <Compile Include="ui\updates\SelfUpdate.cs" />
     <Compile Include="game\Weapon.cs" />
     <Compile Include="scraping\WeaponScraper.cs" />
     <Compile Include="Properties\Resources.Designer.cs">

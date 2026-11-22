@@ -46,7 +46,19 @@ namespace InventoryKamera
 			Current = this;
 			Logger.Info("Inventory Kamera version {0}", VersionText);
 			AppStartup.PrepareSettings();
+			CleanUpLastUpdate();
 			Show(Looks.Shown((Look)Properties.Settings.Default.Look));
+		}
+
+		// After a one-click update: the old files go once the old app has closed (a few seconds in).
+		private static void CleanUpLastUpdate()
+		{
+			System.Threading.Tasks.Task.Run(async () =>
+			{
+				await System.Threading.Tasks.Task.Delay(3000);
+				try { SelfUpdate.CleanUp(Application.StartupPath); }
+				catch (Exception ex) { Logger.Warn(ex, "Couldn't clean up after the last update"); }
+			});
 		}
 
 		private static Form CreateWindow(Look look)

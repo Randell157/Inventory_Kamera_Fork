@@ -19,9 +19,9 @@ namespace InventoryKamera.Tests
 			internal Exception AppFails, DataFails;
 			internal Version Remote = new Version(7, 3);
 			public Version Current => new Version(1, 7, 0, 6734);
-			public Task<(string Tag, DateTime? Published, string Notes, string Url)> LatestReleaseAsync() =>
+			public Task<ReleaseInfo> LatestReleaseAsync() =>
 				AppFails != null ? throw AppFails
-				: Task.FromResult((Tag, (DateTime?)new DateTime(2026, 12, 3, 18, 0, 0, DateTimeKind.Utc), "## What's new\n- **Simple** shows what it scans\n- See [the issue](https://example.invalid/1)", "https://github.com/x/y/releases/tag/" + Tag));
+				: Task.FromResult(new ReleaseInfo { Tag = Tag, Published = new DateTime(2026, 12, 3, 18, 0, 0, DateTimeKind.Utc), Notes = "## What's new\n- **Simple** shows what it scans\n- See [the issue](https://example.invalid/1)", Url = "https://github.com/x/y/releases/tag/" + Tag });
 			public Version LocalGameData => new Version(7, 2);
 			public Task<Version> RemoteGameDataAsync() => DataFails != null ? throw DataFails : Task.FromResult(Remote);
 		}
