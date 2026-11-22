@@ -202,6 +202,22 @@ namespace InventoryKamera.Tests
 		}
 
 		[TestMethod]
+		public void SpeedDropDownHasClassicsTooltips()
+		{
+			WithAdvanced((form, s) =>
+			{
+				Assert.AreEqual(DrawMode.OwnerDrawFixed, form.ScanSpeed.DrawMode, "drawn so the open list can explain each choice");
+				foreach (int step in new[] { ScanSpeeds.Auto, 0, 2, 4 })
+				{
+					s.ScanSpeed = step;
+					Assert.AreEqual(ScanSpeeds.TooltipText(step), form.SpeedTips.CurrentTip(form.ScanSpeed), "the chosen speed, as in Classic");
+				}
+				form.ScanSpeed.SelectedIndex = ScanSpeeds.ChoiceOf(1);
+				Assert.AreEqual(ScanSpeeds.TooltipText(1), form.SpeedTips.CurrentTip(form.ScanSpeed));
+			});
+		}
+
+		[TestMethod]
 		public void ChangeLightsUpItsBoxAndFocusesIt()
 		{
 			WithAdvanced((form, s) =>

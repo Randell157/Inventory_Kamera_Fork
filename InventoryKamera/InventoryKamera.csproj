@@ -115,6 +115,7 @@
     <Compile Include="ui\advanced\AdvancedText.cs" />
     <Compile Include="ui\advanced\HowManyControl.cs" />
     <Compile Include="ui\advanced\AdvancedForm.cs" />
+    <Compile Include="ui\advanced\ScanSpeedTips.cs" />
     <Compile Include="game\Weapon.cs" />
     <Compile Include="scraping\WeaponScraper.cs" />
     <Compile Include="Properties\Resources.Designer.cs">

@@ -23,6 +23,7 @@ namespace InventoryKamera
 		internal readonly CheckBox LogScreenshots = new CheckBox(), EquipWeapons = new CheckBox(), EquipArtifacts = new CheckBox();
 		internal readonly ComboBox ScanSpeed = new ComboBox();
 		private readonly Label scanSpeedHint = new Label();
+		internal ScanSpeedTips SpeedTips { get; private set; }
 		internal readonly TextBox OutputPath = new TextBox();
 		internal readonly StarRating WeaponRarity = new StarRating(), ArtifactRarity = new StarRating();
 		internal readonly NumericUpDown WeaponLevel = new NumericUpDown(), ArtifactLevel = new NumericUpDown();
@@ -133,7 +134,7 @@ namespace InventoryKamera
 			}
 			tips.SetToolTip(DevItems, "Character development items");
 
-			Caption(group, "Delay per item", 10, 55);
+			var delayLabel = Caption(group, "Delay per item", 10, 55);
 			ScanSpeed.DropDownStyle = ComboBoxStyle.DropDownList;
 			ScanSpeed.SetBounds(110, 51, 190, 23);
 			ScanSpeed.AccessibleName = "Delay per item";
@@ -144,11 +145,13 @@ namespace InventoryKamera
 				int step = ScanSpeeds.StepAt(ScanSpeed.SelectedIndex);
 				if (Settings.ScanSpeed != step) Settings.ScanSpeed = step;
 				scanSpeedHint.Text = ScanSpeeds.HintText(step);
+				SpeedTips.ShowCurrent(step);
 			};
 			group.Controls.Add(ScanSpeed);
 			scanSpeedHint.SetBounds(306, 55, 220, 18);
 			scanSpeedHint.ForeColor = UserInterface.OkColor;
 			group.Controls.Add(scanSpeedHint);
+			SpeedTips = new ScanSpeedTips(ScanSpeed, delayLabel, scanSpeedHint);
 
 			Caption(group, "Save exports to", 10, 86);
 			OutputPath.SetBounds(110, 83, 316, 23);
@@ -517,6 +520,7 @@ namespace InventoryKamera
 				StopListening();
 				Settings.PropertyChanged -= SettingChanged;
 				highlightTimer.Dispose();
+				SpeedTips?.Dispose();
 				tips.Dispose();
 			}
 			base.Dispose(disposing);
