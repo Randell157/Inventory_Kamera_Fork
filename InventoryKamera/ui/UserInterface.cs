@@ -59,6 +59,13 @@ namespace InventoryKamera
 		internal static event Action StatusChanged;
 		internal static event Action ErrorsChanged;
 
+		// For tests: how many windows are listening (a closed window must stop listening).
+		internal static int Listeners =>
+			(CountsChanged?.GetInvocationList().Length ?? 0) + (StatusChanged?.GetInvocationList().Length ?? 0) + (ErrorsChanged?.GetInvocationList().Length ?? 0);
+
+		// View → Zoom of the open window (1 = 100 %). Classic's status line sizes its font from it.
+		internal static float StatusZoom { get; set; } = 1;
+
 		public static void Init(PictureBox _gear_PictureBox, TextBox _a_textbox, PictureBox _c_name, PictureBox _c_level, PictureBox[] _c_talent, TextBox _c_textbox, Label _weaponCount, Label _weaponMax, Label _artifactCount, Label _artifactMax, Label _characterCount, Label _programStatus, TextBox _error_textBox, PictureBox _navigation_Image)
 		{
 			// Artifacts and Weapons
@@ -80,6 +87,7 @@ namespace InventoryKamera
 
 			// Status
 			programStatus_Label = _programStatus;
+			statusTop = -1;   // a new window (another look or zoom) has its own status position
 
 			// Error
 			error_TextBox = _error_textBox;
@@ -263,6 +271,9 @@ namespace InventoryKamera
 		public static readonly Color OkColor = Color.FromArgb(0, 110, 0);
 		public static readonly Color ErrorColor = Color.FromArgb(192, 0, 0);
 
+		// Simple's and Classic's tips ("New: View → Simple"): link blue, 6:1 on the window's gray.
+		public static readonly Color HintColor = Color.FromArgb(0, 84, 166);
+
 		// The main window's background; the status label sits on it.
 		public static readonly Color WindowColor = Color.FromArgb(234, 230, 230);
 
@@ -308,8 +319,8 @@ namespace InventoryKamera
 				var (size, text) = FitStatus(status, programStatus_Label.Font.FontFamily);
 				programStatus_Label.Text = text;
 				programStatus_Label.ForeColor = color;
-				programStatus_Label.Font = new Font(programStatus_Label.Font.FontFamily, size);
-				programStatus_Label.Top = text != null && text.Contains("\n") ? statusTop - 3 : statusTop;   // two lines end above the Scan button
+				programStatus_Label.Font = new Font(programStatus_Label.Font.FontFamily, size * StatusZoom);
+				programStatus_Label.Top = text != null && text.Contains("\n") ? statusTop - (int)Math.Round(3 * StatusZoom) : statusTop;   // two lines end above the Scan button
 				programStatus_Label.Refresh();
 			};
 

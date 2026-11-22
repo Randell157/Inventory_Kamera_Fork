@@ -105,6 +105,11 @@
     <Compile Include="ui\LookContext.cs" />
     <Compile Include="ui\Looks.cs" />
     <Compile Include="ui\ScanSession.cs" />
+    <Compile Include="ui\Zoom.cs" />
+    <Compile Include="ui\LookMenu.cs" />
+    <Compile Include="ui\ScanWindows.cs" />
+    <Compile Include="ui\simple\SimpleText.cs" />
+    <Compile Include="ui\simple\SimpleForm.cs" />
     <Compile Include="game\Weapon.cs" />
     <Compile Include="scraping\WeaponScraper.cs" />
     <Compile Include="Properties\Resources.Designer.cs">

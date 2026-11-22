@@ -41,13 +41,7 @@ namespace InventoryKamera
 
             Language_ComboBox.SelectedItem = "ENG";
 
-            var version = Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
-#if DEBUG
-            version = Assembly.GetExecutingAssembly().GetName().Version.ToString(4);
-#endif
-            Logger.Info("Inventory Kamera version {0}", version);
-
-            Text = $"Inventory Kamera V{version}";
+            Text = $"Inventory Kamera V{LookContext.VersionText}";   // the version is logged by LookContext
 
             UserInterface.Init(
                 GearPictureBox,
@@ -66,36 +60,9 @@ namespace InventoryKamera
                 Navigation_Image);
 
             AddZeroMeansAllHints();
-            AddViewMenu();
+            // View -> Simple / Advanced / Classic and Zoom, between File and Options.
+            menuStrip1.Items.Insert(menuStrip1.Items.IndexOf(fileToolStripMenuItem) + 1, LookMenu.Build(Look.Classic, this));
         }
-
-        #region View menu (1.7)
-
-        // View -> Simple / Advanced / Classic, between File and Options. The open look is ticked.
-        private void AddViewMenu()
-        {
-            var view = new ToolStripMenuItem("View");
-            foreach (var look in new[] { Look.Simple, Look.Advanced, Look.Classic })
-            {
-                var item = new ToolStripMenuItem(Looks.MenuText(look))
-                {
-                    Checked = look == Look.Classic,
-                    Tag = look,
-                    ToolTipText = Looks.IsBuilt(look) ? null : Looks.NotBuiltTip(look),
-                };
-                item.Click += (s, e) => LookContext.Current?.SwitchTo(look);
-                view.DropDownItems.Add(item);
-            }
-            // Not while a scan runs (the scan reports to this window); unbuilt looks stay greyed out.
-            view.DropDownOpening += (s, e) =>
-            {
-                foreach (ToolStripItem item in view.DropDownItems)
-                    item.Enabled = Looks.IsBuilt((Look)item.Tag) && !ScanSession.IsRunning;
-            };
-            menuStrip1.Items.Insert(menuStrip1.Items.IndexOf(fileToolStripMenuItem) + 1, view);
-        }
-
-        #endregion View menu (1.7)
 
         // ILookWindow: the lookup tables were reloaded; re-check the custom-name boxes against them.
         public void LookupTablesReloaded()
@@ -175,7 +142,16 @@ namespace InventoryKamera
             {
                 OutputPath_TextBox.Text = Directory.GetCurrentDirectory() + @"\GenshinData";
             }
-            
+
+            // Someone upgrading from 1.6 is told once that the new looks exist.
+            var settings = Properties.Settings.Default;
+            if (Looks.ShowHint(settings.LooksHintShown, Look.Classic))
+            {
+                UserInterface.SetProgramStatus(Looks.HintText, UserInterface.HintColor);
+                settings.LooksHintShown = true;
+                settings.Save();
+                Logger.Info("Showed the new-looks hint");
+            }
         }
 
         private void UpdateKeyTextBoxes()
@@ -232,62 +208,9 @@ namespace InventoryKamera
             ScanSession.Start(OutputPath_TextBox.Text, this);
         }
 
-        #region Scan-ended notification
-
-        // The game usually has focus when a scan ends, and Windows won't let this window jump in
-        // front of it. So flash the taskbar button until the window is brought forward, and show
-        // a summary popup (OK only, no questions).
-        public void ScanEnded(string title, string message, MessageBoxIcon icon)
-        {
-            BeginInvoke((MethodInvoker)delegate
-            {
-                FlashTaskbar();
-                MessageBox.Show(this, message, title, MessageBoxButtons.OK, icon);
-            });
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct FLASHWINFO
-        {
-            public uint cbSize;
-            public IntPtr hwnd;
-            public uint dwFlags;
-            public uint uCount;
-            public uint dwTimeout;
-        }
-
-        [DllImport("user32.dll")]
-        private static extern bool FlashWindowEx(ref FLASHWINFO pwfi);
-
-        private const uint FLASHW_ALL = 3;        // flash the caption and the taskbar button
-        private const uint FLASHW_TIMERNOFG = 12; // keep flashing until the window comes to the foreground
-
-        private void FlashTaskbar()
-        {
-            var info = new FLASHWINFO
-            {
-                cbSize = (uint)Marshal.SizeOf(typeof(FLASHWINFO)),
-                hwnd = Handle,
-                dwFlags = FLASHW_ALL | FLASHW_TIMERNOFG,
-                uCount = uint.MaxValue,
-                dwTimeout = 0,
-            };
-            FlashWindowEx(ref info);
-        }
-
-        #endregion Scan-ended notification
-
-        // Copies the scan to the clipboard and opens Genshin Optimizer. Only used by the button.
-        private void OpenOptimizerDialog(GOOD data)
-        {
-            var t = new Thread(() => Clipboard.SetText(data.ToString()));
-            t.SetApartmentState(ApartmentState.STA);
-            t.Start();
-            t.Join();
-            MessageBox.Show("Content copied to your clipboard! Paste the content into the textbox when prompted.", "Data Copied", MessageBoxButtons.OK);
-            Process.Start(new ProcessStartInfo("https://frzyc.github.io/genshin-optimizer/#/setting") { UseShellExecute = true });
-
-        }
+        // Flashes the taskbar and shows the end-of-scan summary (shared with Simple: ScanWindows).
+        public void ScanEnded(string title, string message, MessageBoxIcon icon) =>
+            ScanWindows.ShowScanEnded(this, title, message, icon);
 
         private void Github_Label_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
@@ -306,17 +229,8 @@ namespace InventoryKamera
 
         private void FileSelectButton_Click(object sender, EventArgs e)
         {
-            // A nicer file browser
-            CommonOpenFileDialog d = new CommonOpenFileDialog
-            {
-                InitialDirectory = !Directory.Exists(OutputPath_TextBox.Text) ? Directory.GetCurrentDirectory() : OutputPath_TextBox.Text,
-                IsFolderPicker = true
-            };
-
-            if (d.ShowDialog() == CommonFileDialogResult.Ok)
-            {
-                OutputPath_TextBox.Text = d.FileName;
-            }
+            var folder = ScanWindows.PickFolder(OutputPath_TextBox.Text);
+            if (folder != null) OutputPath_TextBox.Text = folder;
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
@@ -537,14 +451,7 @@ namespace InventoryKamera
 
         private void ExportFolderMenuItem_Click(object sender, EventArgs e)
         {
-            if (Directory.Exists(OutputPath_TextBox.Text) || Directory.CreateDirectory(OutputPath_TextBox.Text).Exists)
-            {
-                Process.Start($@"{OutputPath_TextBox.Text}");
-            }
-            else
-            {
-                Process.Start("explorer.exe");
-            }
+            ScanWindows.OpenFolder(OutputPath_TextBox.Text);
         }
 
         // The update checks and the first download run once per launch from LookContext, whatever look is open.
@@ -552,7 +459,7 @@ namespace InventoryKamera
 
         private void Export_Button_Click(object sender, EventArgs e)
         {
-            OpenOptimizerDialog(new GOOD(ScanSession.Data));
+            ScanWindows.OpenOptimizer(new GOOD(ScanSession.Data));
         }
 
         private void MainForm_Activate()

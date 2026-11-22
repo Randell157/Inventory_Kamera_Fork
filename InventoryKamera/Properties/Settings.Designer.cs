@@ -106,6 +106,30 @@ namespace InventoryKamera.Properties {
                 this["Look"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("100")]
+        public int Zoom {
+            get {
+                return ((int)(this["Zoom"]));
+            }
+            set {
+                this["Zoom"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool LooksHintShown {
+            get {
+                return ((bool)(this["LooksHintShown"]));
+            }
+            set {
+                this["LooksHintShown"] = value;
+            }
+        }
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]

@@ -68,6 +68,15 @@ namespace InventoryKamera
 				settings.Look = (int)look;
 				settings.Save();
 			}
+			if (!hadSettings && !settings.LooksHintShown)
+			{
+				settings.LooksHintShown = true;   // a new install starts on Simple: nothing to point out
+				settings.Save();
+			}
+
+			// The export folder, which Classic used to fill in when its window loaded.
+			if (string.IsNullOrWhiteSpace(settings.OutputPath))
+				settings.OutputPath = System.IO.Directory.GetCurrentDirectory() + @"\GenshinData";
 
 			Database = new DatabaseManager();
 		}
