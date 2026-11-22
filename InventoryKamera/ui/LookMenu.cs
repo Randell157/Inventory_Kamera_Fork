@@ -40,13 +40,13 @@ namespace InventoryKamera
 			};
 			zoom.DropDownOpening += (s, e) =>
 			{
-				int shown = LookContext.Current?.ShownZoom ?? Zoom.Normal;
-				var normal = new System.Drawing.Size(window.Width * Zoom.Normal / shown, window.Height * Zoom.Normal / shown);
+				int shown = Zoom.Current(window);
+				var measured = Zoom.Measure(window);
 				var area = Screen.FromControl(window).WorkingArea;
 				foreach (ToolStripMenuItem item in zoom.DropDownItems)
 				{
 					int step = (int)item.Tag;
-					bool fits = Zoom.Fits(normal, step, area);
+					bool fits = Zoom.Fits(measured, step, area);
 					item.Checked = step == shown;
 					item.Enabled = fits;
 					item.Text = Zoom.MenuText(step) + (fits ? "" : "  (too big for this screen)");   // greyed items show no tooltip

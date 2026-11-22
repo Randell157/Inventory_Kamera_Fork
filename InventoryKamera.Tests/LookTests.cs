@@ -25,13 +25,12 @@ namespace InventoryKamera.Tests
 		}
 
 		[TestMethod]
-		public void LooksNotBuiltYetOpenAsClassic()
+		public void EveryLookIsBuilt()
 		{
 			Assert.AreEqual(Look.Classic, Looks.Shown(Look.Classic));
 			Assert.AreEqual(Look.Simple, Looks.Shown(Look.Simple), "Simple is built (step 3)");
-			Assert.AreEqual(Look.Classic, Looks.Shown(Look.Advanced), "Advanced arrives in step 4");
-			Assert.AreEqual("Advanced is coming in Inventory Kamera 1.7.", Looks.NotBuiltTip(Look.Advanced));
-			Assert.AreEqual("More options: View → Classic", Looks.MoreOptionsText, "until Advanced exists");
+			Assert.AreEqual(Look.Advanced, Looks.Shown(Look.Advanced), "Advanced is built (step 4)");
+			Assert.AreEqual("More options: View → Advanced", Looks.MoreOptionsText);
 		}
 
 		[TestMethod]

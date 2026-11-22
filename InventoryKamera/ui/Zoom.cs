@@ -19,29 +19,48 @@ namespace InventoryKamera
 
 		internal static string MenuText(int percent) => percent + "%";
 
-		// A window of baseSize at 100 % still fits in the screen's work area (without the taskbar) at percent.
-		internal static bool Fits(Size baseSize, int percent, Rectangle workArea) =>
-			percent == Normal ||
-			(baseSize.Width * percent / 100 <= workArea.Width && baseSize.Height * percent / 100 <= workArea.Height);
+		// What decides whether a zoom fits: the inside of the window (which zooms) and the title bar and borders
+		// around it (which don't), both in screen pixels, the inside as it would be at 100 %.
+		internal struct WindowSize
+		{
+			internal readonly Size Client, Chrome;
+			internal WindowSize(Size client, Size chrome) { Client = client; Chrome = chrome; }
+		}
+
+		internal static Size SizeAt(WindowSize size, int percent) =>
+			new Size(size.Client.Width * percent / 100 + size.Chrome.Width, size.Client.Height * percent / 100 + size.Chrome.Height);
+
+		// The window still fits in the screen's work area (without the taskbar) at percent. 100 % always "fits".
+		internal static bool Fits(WindowSize size, int percent, Rectangle workArea)
+		{
+			if (percent == Normal) return true;
+			var at = SizeAt(size, percent);
+			return at.Width <= workArea.Width && at.Height <= workArea.Height;
+		}
 
 		// The saved zoom, or the biggest smaller step that fits (on a smaller screen, say). The setting is kept.
-		internal static int Usable(int saved, Size baseSize, Rectangle workArea) =>
-			Steps.Where(step => step <= Valid(saved) && Fits(baseSize, step, workArea)).DefaultIfEmpty(Normal).Max();
+		internal static int Usable(int saved, WindowSize size, Rectangle workArea) =>
+			Steps.Where(step => step <= Valid(saved) && Fits(size, step, workArea)).DefaultIfEmpty(Normal).Max();
 
-		// A window not shown yet, at 100 %: its size in screen pixels (its designed size times the screen's DPI scaling).
-		internal static Size BaseSize(Form window)
+		// Measures a window at its current zoom. Before it's first shown its sizes are still the designed ones,
+		// so Windows' own DPI scaling is added; after that they're real screen pixels.
+		internal static WindowSize Measure(Form window)
 		{
-			float dpi;
-			using (var screen = Graphics.FromHwnd(IntPtr.Zero)) dpi = screen.DpiX;
-			return new Size((int)Math.Round(window.Width * dpi / 96f), (int)Math.Round(window.Height * dpi / 96f));
-		}
-
-		// A window already shown: what its size would be at 100 %.
-		internal static Size NormalSize(Form window)
-		{
+			var chrome = window.Size - window.ClientSize;
+			if (!windowsShown.TryGetValue(window, out _))
+			{
+				float dpi;
+				using (var screen = Graphics.FromHwnd(IntPtr.Zero)) dpi = screen.DpiX;
+				Size Dpi(Size s) => new Size((int)Math.Round(s.Width * dpi / 96f), (int)Math.Round(s.Height * dpi / 96f));
+				return new WindowSize(Dpi(new Size(window.ClientSize.Width * Normal / Current(window), window.ClientSize.Height * Normal / Current(window))), Dpi(chrome));
+			}
 			int now = Current(window);
-			return new Size(window.Width * Normal / now, window.Height * Normal / now);
+			return new WindowSize(new Size(window.ClientSize.Width * Normal / now, window.ClientSize.Height * Normal / now), chrome);
 		}
+
+		// Windows that have been on screen (their sizes include Windows' DPI scaling).
+		private static readonly ConditionalWeakTable<Form, object> windowsShown = new ConditionalWeakTable<Form, object>();
+		internal static void MarkShown(Form window) { if (!windowsShown.TryGetValue(window, out _)) windowsShown.Add(window, new object()); }
 
 		private sealed class Percent { internal int Value = Normal; }
 		private static readonly ConditionalWeakTable<Form, Percent> percents = new ConditionalWeakTable<Form, Percent>();

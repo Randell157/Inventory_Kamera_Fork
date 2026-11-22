@@ -12,8 +12,8 @@ namespace InventoryKamera
 		internal static Look Stored(int saved, bool hadSettings) =>
 			saved >= (int)Look.Classic && saved <= (int)Look.Advanced ? (Look)saved : hadSettings ? Look.Classic : Look.Simple;
 
-		// Advanced is built in the next step of 1.7; until then it opens as Classic.
-		internal static bool IsBuilt(Look look) => look == Look.Classic || look == Look.Simple;
+		// Every look is built (1.7 step 4). Kept so a future look can be listed before it exists.
+		internal static bool IsBuilt(Look look) => look == Look.Classic || look == Look.Simple || look == Look.Advanced;
 
 		internal static Look Shown(Look look) => IsBuilt(look) ? look : Look.Classic;
 

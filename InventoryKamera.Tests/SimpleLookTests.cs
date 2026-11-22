@@ -24,10 +24,16 @@ namespace InventoryKamera.Tests
 			Assert.AreEqual(100, Zoom.Valid(0), "unset or broken");
 			Assert.AreEqual("175%", Zoom.MenuText(175));
 
-			var simple = new Size(360, 550);
-			Assert.IsTrue(Zoom.Fits(simple, 175, FullHd), "962 px tall");
-			Assert.IsFalse(Zoom.Fits(simple, 200, FullHd), "1100 px tall");
-			Assert.IsTrue(Zoom.Fits(new Size(5000, 5000), 100, FullHd), "100 % is always allowed");
+			// Simple: 344 × 512 inside, plus a title bar and borders (16 × 39) that don't zoom.
+			var simple = new Zoom.WindowSize(new Size(344, 512), new Size(16, 39));
+			Assert.AreEqual(new Size(618, 935), Zoom.SizeAt(simple, 175));
+			Assert.IsTrue(Zoom.Fits(simple, 175, FullHd), "935 px tall");
+			Assert.IsFalse(Zoom.Fits(simple, 200, FullHd), "1,063 px tall");
+			Assert.IsTrue(Zoom.Fits(new Zoom.WindowSize(new Size(5000, 5000), Size.Empty), 100, FullHd), "100 % is always allowed");
+			// Advanced: 864 × 561 inside. 175 % is 1,021 px tall with the title bar: it fits (scaling the
+			// title bar too said 1,050 and wrongly refused it, while the menu allowed it).
+			var advanced = new Zoom.WindowSize(new Size(864, 561), new Size(16, 39));
+			Assert.AreEqual(175, Zoom.Usable(300, advanced, FullHd));
 			Assert.AreEqual(175, Zoom.Usable(300, simple, FullHd), "the biggest step that fits");
 			Assert.AreEqual(150, Zoom.Usable(150, simple, FullHd), "a saved step that fits is used");
 			Assert.AreEqual(300, Zoom.Usable(300, simple, new Rectangle(0, 0, 3840, 2100)), "4K");
@@ -106,11 +112,11 @@ namespace InventoryKamera.Tests
 
 		// What showing the window does, without showing it: create every control so its bindings read the settings.
 		// (Control.CreateControl(ignoreVisible: true) is internal; it's what Show runs.)
-		private static void Bind(Form form) =>
+		internal static void Bind(Form form) =>
 			typeof(Control).GetMethod("CreateControl", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance, null, new[] { typeof(bool) }, null)
 				.Invoke(form, new object[] { true });
 
-		private static Dictionary<string, object> AllSettings()
+		internal static Dictionary<string, object> AllSettings()
 		{
 			var settings = Properties.Settings.Default;
 			return settings.Properties.Cast<SettingsProperty>().ToDictionary(p => p.Name, p => settings[p.Name]);
@@ -197,7 +203,7 @@ namespace InventoryKamera.Tests
 				{
 					var normal = form.Size;
 					Assert.IsTrue(normal.Width <= 370 && normal.Height <= 560, $"about 360 × 550 at 100 %: {normal}");
-					Assert.AreEqual(175, Zoom.Usable(300, normal, FullHd));
+					Assert.AreEqual(175, Zoom.Usable(300, Zoom.Measure(form), FullHd));
 
 					int scanWidth = form.Controls.OfType<Button>().Max(b => b.Width);
 					Zoom.Apply(form, 200);
@@ -209,7 +215,7 @@ namespace InventoryKamera.Tests
 		}
 
 		// Every control's position, size and font, to compare a window before and after zooming.
-		private static List<string> Layout(Control root)
+		internal static List<string> Layout(Control root)
 		{
 			var all = new List<string> { $"{root.Name} {root.ClientSize} {root.Font.Size}" };
 			void Walk(Control parent)

@@ -46,8 +46,15 @@ namespace InventoryKamera
 			Show(Looks.Shown((Look)Properties.Settings.Default.Look));
 		}
 
-		// Advanced gets its own window in step 4 of 1.7; until then Looks.Shown opens Classic instead.
-		private static Form CreateWindow(Look look) => look == Look.Simple ? (Form)new SimpleForm() : new MainForm();
+		private static Form CreateWindow(Look look)
+		{
+			switch (look)
+			{
+				case Look.Simple: return new SimpleForm();
+				case Look.Advanced: return new AdvancedForm();
+				default: return new MainForm();
+			}
+		}
 
 		private void Show(Look look)
 		{
@@ -64,12 +71,14 @@ namespace InventoryKamera
 				next.FormClosed += WindowClosed;
 				next.Shown += WindowShown;
 				next.StartPosition = FormStartPosition.Manual;
-				Zoom.Apply(next, Zoom.Usable(saved, Zoom.BaseSize(next), area));
-				size = Zoom.BaseSize(next);   // the scaled size, in screen pixels
+				var measured = Zoom.Measure(next);   // at 100 %, before it's scaled
+				int opening = Zoom.Usable(saved, measured, area);
+				Zoom.Apply(next, opening);
+				size = Zoom.SizeAt(measured, opening);   // in screen pixels
 			}
 			else
 			{
-				Zoom.Set(next, Zoom.Usable(saved, Zoom.NormalSize(next), area));   // zoom may have changed while it was hidden
+				Zoom.Set(next, Zoom.Usable(saved, Zoom.Measure(next), area));   // zoom may have changed while it was hidden
 				size = next.Size;
 			}
 			next.Location = old != null ? Placement.KeepTopLeft(old.Location, size, area) : Placement.Centered(size, area);
@@ -78,6 +87,7 @@ namespace InventoryKamera
 			window = next;
 			UserInterface.StatusZoom = ShownZoom / 100f;
 			next.Show();       // the new window appears first, then the old one goes, so there's no empty moment
+			Zoom.MarkShown(next);
 			next.Activate();
 			(next as ILookWindow)?.BecameShown();
 			if (old != null && old != next)
@@ -123,7 +133,7 @@ namespace InventoryKamera
 
 			var area = Screen.FromControl(window).WorkingArea;
 			var topLeft = window.Location;
-			Zoom.Set(window, Zoom.Usable(percent, Zoom.NormalSize(window), area));
+			Zoom.Set(window, Zoom.Usable(percent, Zoom.Measure(window), area));
 			window.Location = Placement.KeepTopLeft(topLeft, window.Size, area);
 			UserInterface.StatusZoom = ShownZoom / 100f;
 			(window as ILookWindow)?.BecameShown();   // Classic re-fits its status line

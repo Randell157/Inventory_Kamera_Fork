@@ -75,6 +75,9 @@ namespace InventoryKamera
         public void BecameShown()
         {
             PointUserInterfaceHere();
+            UpdateKeyTextBoxes();   // Advanced may have changed them, and the scan speed
+            int choice = ScanSpeeds.ChoiceOf(ScanSpeeds.Valid(Properties.Settings.Default.ScanSpeed));
+            if (ScanSpeed_ComboBox.Items.Count > choice && ScanSpeed_ComboBox.SelectedIndex != choice) ScanSpeed_ComboBox.SelectedIndex = choice;
             UserInterface.RefitStatus();
         }
 
@@ -172,23 +175,9 @@ namespace InventoryKamera
 
         private void UpdateKeyTextBoxes()
         {
-            inventoryToolStripTextBox.Text = new KeysConverter().ConvertToString((Keys)Navigation.inventoryKey);
-            characterToolStripTextBox.Text = new KeysConverter().ConvertToString((Keys)Navigation.characterKey);
-            slot1StripTextBox.Text = new KeysConverter().ConvertToString((Keys)Navigation.slotOneKey);
-
-            // Make sure text boxes show key glyph and not "OEM..."
-            if (inventoryToolStripTextBox.Text.ToUpper().Contains("OEM"))
-            {
-                inventoryToolStripTextBox.Text = KeyCodeToUnicode((Keys)Navigation.inventoryKey);
-            }
-            if (characterToolStripTextBox.Text.ToUpper().Contains("OEM"))
-            {
-                characterToolStripTextBox.Text = KeyCodeToUnicode((Keys)Navigation.characterKey);
-            }
-            if (slot1StripTextBox.Text.ToUpper().Contains("OEM"))
-            {
-                slot1StripTextBox.Text = KeyCodeToUnicode((Keys)Navigation.slotOneKey);
-            }
+            inventoryToolStripTextBox.Text = GameKeys.Display((Keys)Navigation.inventoryKey);
+            characterToolStripTextBox.Text = GameKeys.Display((Keys)Navigation.characterKey);
+            slot1StripTextBox.Text = GameKeys.Display((Keys)Navigation.slotOneKey);
         }
 
         // Yellow only when a box holds another character's name; its own default
@@ -366,104 +355,14 @@ namespace InventoryKamera
             Application.Exit();
         }
 
-        private void OptionsMenuItem_KeyDown(object sender, KeyEventArgs e)
-        {
-            e.Handled = true;
-            e.SuppressKeyPress = true;
-
-            // Virtual keys for 0-9, A-Z
-            bool vk = e.KeyCode >= Keys.D0 && e.KeyCode <= Keys.Z;
-            // Numpad keys and function keys (internally accepts up to F24)
-            bool np = e.KeyCode >= Keys.NumPad0 && e.KeyCode <= Keys.F24;
-            // OEM keys (Keys that vary depending on keyboard layout)
-            bool oem = e.KeyCode >= Keys.Oem1 && e.KeyCode <= Keys.Oem7;
-            // Arrow keys, spacebar, INS, DEL, HOME, END, PAGEUP, PAGEDOWN
-            bool misc = e.KeyCode == Keys.Space || (e.KeyCode >= Keys.Left && e.KeyCode <= Keys.Down) || (e.KeyCode >= Keys.Prior && e.KeyCode <= Keys.Home) || e.KeyCode == Keys.Insert || e.KeyCode == Keys.Delete || e.KeyCode == Keys.Back;
-
-            // Validate that key is an acceptable Genshin keybind.
-            if (!vk && !np && !oem && !misc)
-            {
-                Logger.Debug("Invalid {key} key pressed", e.KeyCode);
-                return;
-            }
-            ToolStripTextBox s = (ToolStripTextBox)sender;
-
-            // Needed to differentiate between NUMPAD numbers and numbers at top of keyboard
-            s.Text = np || e.KeyCode == Keys.Back ? new KeysConverter().ConvertToString(e.KeyCode) : KeyCodeToUnicode(e.KeyData);
-
-            // Spacebar or upper navigation keys (INSERT-PAGEDOWN keys) make textbox empty
-            if (string.IsNullOrWhiteSpace(s.Text) || string.IsNullOrEmpty(s.Text))
-            {
-                s.Text = new KeysConverter().ConvertToString(e.KeyCode);
-            }
-
-
-            switch (s.Tag)
-            {
-                case "InventoryKey":
-                    Navigation.inventoryKey = (VirtualKeyCode)e.KeyCode;
-                    Logger.Debug("Inv key set to: {key}", Navigation.inventoryKey);
-                    Properties.Settings.Default.InventoryKey = e.KeyValue;
-                    break;
-
-                case "CharacterKey":
-                    Navigation.characterKey = (VirtualKeyCode)e.KeyCode;
-                    Logger.Debug("Char key set to: {key}", Navigation.characterKey);
-                    Properties.Settings.Default.CharacterKey = e.KeyValue;
-                    break;
-
-                case "slot1Key":
-                    Navigation.slotOneKey = (VirtualKeyCode)e.KeyCode;
-                    Logger.Debug("Slot 1 key set to: {key}", Navigation.slotOneKey);
-                    Properties.Settings.Default.Slot1Key = e.KeyValue;
-                    break;
-
-                default:
-                    break;
-            }
-        }
+        // Options -> Inventory / Character Screen / Character Slot 1 key (shared with Advanced: GameKeys).
+        private void OptionsMenuItem_KeyDown(object sender, KeyEventArgs e) => GameKeys.KeyDown(sender, e);
 
         private async void DatabaseUpdateMenuItem_Click(object sender, EventArgs e)
         {
             await AppStartup.UpdateLookupTablesAsync(this);
         }
 
-        #region Unicode Helper Functions
-
-        // Needed to display OEM keys as glyphs from keyboard. Should work for other languages
-        // and keyboard layouts but only tested with QWERTY layout.
-        private string KeyCodeToUnicode(Keys key)
-        {
-            byte[] keyboardState = new byte[255];
-            bool keyboardStateStatus = GetKeyboardState(keyboardState);
-
-            if (!keyboardStateStatus)
-            {
-                return "";
-            }
-            uint virtualKeyCode = (uint)key;
-            uint scanCode = MapVirtualKey(virtualKeyCode, 0);
-            IntPtr inputLocaleIdentifier = GetKeyboardLayout(0);
-
-            StringBuilder result = new StringBuilder();
-            ToUnicodeEx(virtualKeyCode, scanCode, keyboardState, result, 5, 0, inputLocaleIdentifier);
-
-            return result.ToString();
-        }
-
-        [DllImport("user32.dll")]
-        private static extern bool GetKeyboardState(byte[] lpKeyState);
-
-        [DllImport("user32.dll")]
-        private static extern uint MapVirtualKey(uint uCode, uint uMapType);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetKeyboardLayout(uint idThread);
-
-        [DllImport("user32.dll")]
-        private static extern int ToUnicodeEx(uint wVirtKey, uint wScanCode, byte[] lpKeyState, [Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pwszBuff, int cchBuff, uint wFlags, IntPtr dwhkl);
-
-        #endregion Unicode Helper Functions
 
         private void ExportFolderMenuItem_Click(object sender, EventArgs e)
         {
