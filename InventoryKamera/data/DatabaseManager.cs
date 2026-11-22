@@ -91,7 +91,7 @@ namespace InventoryKamera
 
             // Missing tables are no longer downloaded here: this ran while the window was being built,
             // so a new install waited with nothing on screen, and a failed download crashed the startup.
-            // The main window downloads them once it's shown (MainForm.DownloadMissingTablesAsync).
+            // The main window downloads them once it's shown (AppStartup.DownloadMissingTablesAsync).
         }
 
         private static readonly string[] TableFiles = { WeaponsJson, ArtifactsJson, CharactersJson, MaterialsJson };

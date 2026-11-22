@@ -471,7 +471,7 @@ namespace InventoryKamera
 							break;
 
 						default:
-							MainForm.UnexpectedError("Unknown Image type for Image Processor");
+							ScanSession.UnexpectedError("Unknown Image type for Image Processor");
 							break;
 					}
 				}

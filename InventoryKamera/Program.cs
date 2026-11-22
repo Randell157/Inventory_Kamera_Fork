@@ -22,8 +22,8 @@ namespace InventoryKamera
 
 				Application.EnableVisualStyles();
 				Application.SetCompatibleTextRenderingDefault(false);
-				Application.Run(new MainForm());
-				//Application.Run(new MainUI());
+				// One window at a time in the chosen look (1.7: Simple, Advanced or Classic).
+				Application.Run(new LookContext());
             }
             catch (Exception ex)
             {
@@ -34,6 +34,7 @@ namespace InventoryKamera
 					MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 			Logger.Info("Application closed");
+			LogManager.Shutdown();   // was in the window's FormClosing; switching looks closes windows too
 		}
 
         private static void ConfigureLogging()

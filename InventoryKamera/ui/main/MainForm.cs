@@ -22,22 +22,16 @@ using Application = System.Windows.Forms.Application;
 
 namespace InventoryKamera
 {
-    public partial class MainForm : Form
+    // The Classic look: the 1.6 window. Scanning and the startup checks are shared with the other
+    // looks (ScanSession, AppStartup); this window only shows and edits the settings.
+    public partial class MainForm : Form, ILookWindow, IScanWindow
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
-        private static Thread scannerThread;
-        private static InventoryKamera data = new InventoryKamera();
-        private static DatabaseManager databaseManager = new DatabaseManager();
-
-        private bool running = false;
 
         public MainForm()
         {
-            // A blank Wanderer or mannequin name saved earlier gets its default back before the
-            // boxes bind to the settings.
-            foreach (var setting in CustomNames.FilledWhenEmpty)
-                Properties.Settings.Default[setting] = CustomNames.OrDefault(setting, Properties.Settings.Default[setting] as string);
-
+            // Blank Wanderer and mannequin names were already refilled by AppStartup.PrepareSettings,
+            // before the boxes bind to the settings.
             InitializeComponent();
 
             // Leaving one of these boxes empty fills its default back in (not the Traveler's:
@@ -72,6 +66,54 @@ namespace InventoryKamera
                 Navigation_Image);
 
             AddZeroMeansAllHints();
+            AddViewMenu();
+        }
+
+        #region View menu (1.7)
+
+        // View -> Simple / Advanced / Classic, between File and Options. The open look is ticked.
+        private void AddViewMenu()
+        {
+            var view = new ToolStripMenuItem("View");
+            foreach (var look in new[] { Look.Simple, Look.Advanced, Look.Classic })
+            {
+                var item = new ToolStripMenuItem(Looks.MenuText(look))
+                {
+                    Checked = look == Look.Classic,
+                    Tag = look,
+                    ToolTipText = Looks.IsBuilt(look) ? null : Looks.NotBuiltTip(look),
+                };
+                item.Click += (s, e) => LookContext.Current?.SwitchTo(look);
+                view.DropDownItems.Add(item);
+            }
+            // Not while a scan runs (the scan reports to this window); unbuilt looks stay greyed out.
+            view.DropDownOpening += (s, e) =>
+            {
+                foreach (ToolStripItem item in view.DropDownItems)
+                    item.Enabled = Looks.IsBuilt((Look)item.Tag) && !ScanSession.IsRunning;
+            };
+            menuStrip1.Items.Insert(menuStrip1.Items.IndexOf(fileToolStripMenuItem) + 1, view);
+        }
+
+        #endregion View menu (1.7)
+
+        // ILookWindow: the lookup tables were reloaded; re-check the custom-name boxes against them.
+        public void LookupTablesReloaded()
+        {
+            foreach (var box in new[] { travelerNameTextBox, wandererNameTextBox, textBox1, textBox2 })
+                ValidateCustomName(box, EventArgs.Empty);
+        }
+
+        // IScanWindow
+        public Control Invoker => this;
+
+        public void ScanStopped(bool hasData)
+        {
+            ManualExportButton.Invoke((MethodInvoker)delegate
+            {
+                ManualExportButton.Enabled = hasData;
+            });
+            MainForm_Activate();
         }
 
         #region "0 = all" hints
@@ -121,58 +163,9 @@ namespace InventoryKamera
 
         #endregion "0 = all" hints
 
-        private void Hotkey_Pressed(object sender, HotkeyEventArgs e)
-        {
-            Logger.Info("Hotkey pressed");
-            e.Handled = true;
-            // Check if scanner is running
-            if (scannerThread.IsAlive)
-            {
-                // Stop navigating weapons/artifacts
-                scannerThread.Abort();
-
-                UserInterface.SetProgramStatus("Scan Stopped");
-
-                Navigation.Reset();
-            }
-        }
-
-        private void ResetUI()
-        {
-            Navigation.Reset();
-
-            // Need to invoke method from the UI's handle, not the worker thread
-            BeginInvoke((MethodInvoker)delegate { RemoveHotkey(); });
-            Logger.Info("Hotkey removed");
-        }
-
-        private void RemoveHotkey()
-        {
-            HotkeyManager.Current.Remove("Stop");
-        }
-
-        public static void UnexpectedError(string error)
-        {
-            if (scannerThread.IsAlive)
-            {
-                UserInterface.AddError(error);
-            }
-        }
-
         private void MainForm_Load(object sender, EventArgs e)
         {
-            if (Properties.Settings.Default.UpgradeNeeded)
-            {
-                try
-                {
-                    Properties.Settings.Default.Upgrade();
-                    Logger.Info("Application settings loaded from previous version");
-                }
-                catch (Exception) { }
-                Properties.Settings.Default.UpgradeNeeded = false;
-                Properties.Settings.Default.Save();
-            }
-
+            // Settings upgrade, key repairs and the scan speed default: AppStartup.PrepareSettings.
             UpdateKeyTextBoxes();
 
             LoadScanSpeed();
@@ -185,35 +178,8 @@ namespace InventoryKamera
             
         }
 
-        // Key codes 0-6 are "none" and the mouse buttons, which the key boxes can't record. Older
-        // settings stored the slot 1 key as 1 (the left mouse button) by mistake, so the scan never
-        // switched to party slot 1. Replace such values with the default key.
-        internal static int KeyOrDefault(int stored, Keys fallback) => stored > 6 ? stored : (int)fallback;
-
-        private void RepairKeySettings()
-        {
-            var settings = Properties.Settings.Default;
-            int inventory = KeyOrDefault(settings.InventoryKey, Keys.B);
-            int character = KeyOrDefault(settings.CharacterKey, Keys.C);
-            int slot1 = KeyOrDefault(settings.Slot1Key, Keys.D1);
-
-            if (inventory == settings.InventoryKey && character == settings.CharacterKey && slot1 == settings.Slot1Key) return;
-
-            Logger.Info("Repaired key settings (inventory {0}->{1}, character {2}->{3}, slot 1 {4}->{5})",
-                settings.InventoryKey, inventory, settings.CharacterKey, character, settings.Slot1Key, slot1);
-            settings.InventoryKey = inventory;
-            settings.CharacterKey = character;
-            settings.Slot1Key = slot1;
-            settings.Save();
-        }
-
         private void UpdateKeyTextBoxes()
         {
-            RepairKeySettings();
-            Navigation.inventoryKey = (VirtualKeyCode)Properties.Settings.Default.InventoryKey;
-            Navigation.characterKey = (VirtualKeyCode)Properties.Settings.Default.CharacterKey;
-            Navigation.slotOneKey = (VirtualKeyCode)Properties.Settings.Default.Slot1Key;
-
             inventoryToolStripTextBox.Text = new KeysConverter().ConvertToString((Keys)Navigation.inventoryKey);
             characterToolStripTextBox.Text = new KeysConverter().ConvertToString((Keys)Navigation.characterKey);
             slot1StripTextBox.Text = new KeysConverter().ConvertToString((Keys)Navigation.slotOneKey);
@@ -263,142 +229,7 @@ namespace InventoryKamera
 
         private void StartButton_Clicked(object sender, EventArgs e)
         {
-            GC.Collect();
-
-            if (new DatabaseManager().TablesMissing)
-            {
-                Logger.Warn("Scan not started: the lookup tables are missing");
-                UserInterface.SetProgramStatus(FirstDownload.MissingStatus, ok: false);
-                MessageBox.Show(FirstDownload.FailTextFor(DatabaseManager.RetryAfterUtc), FirstDownload.FailTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            UserInterface.ResetAll();
-
-            UserInterface.SetProgramStatus("Scanning");
-            Logger.Info("Starting scan");
-
-            if (Directory.Exists(OutputPath_TextBox.Text) || Directory.CreateDirectory(OutputPath_TextBox.Text).Exists)
-            {
-                if (running)
-                {
-                    Logger.Debug("Already running");
-                    return;
-                }
-                running = true;
-
-                HotkeyManager.Current.AddOrReplace("Stop", Keys.Enter, Hotkey_Pressed);
-                Logger.Info("Hotkey registered");
-                var settings = Properties.Settings.Default;
-                var gameVersion = new DatabaseManager().LocalVersion.ToString(2);
-                var options =
-                    $"\n\tGame Version Data:\t\t\t {gameVersion}\n" +
-                    $"\tWeapons:\t\t\t\t {settings.ScanWeapons}\n" +
-                    $"\tArtifacts:\t\t\t\t {settings.ScanArtifacts}\n" +
-                    $"\tCharacters:\t\t\t\t {settings.ScanCharacters}\n" +
-                    $"\tDev Items:\t\t\t\t {settings.ScanCharDevItems}\n" +
-                    $"\tMaterials:\t\t\t\t {settings.ScanMaterials}\n" +
-                    $"\tMin Weapon Rarity:\t\t {settings.MinimumWeaponRarity}\n" +
-                    $"\tMin Weapon Level:\t\t {settings.MinimumWeaponLevel}\n" +
-                    $"\tEquip Weapons:\t\t\t {settings.EquipWeapons}\n" +
-                    $"\tMin Artifact Rarity:\t {settings.MinimumArtifactRarity}\n" +
-                    $"\tMin Artifact Level:\t\t {settings.MinimumArtifactLevel}\n" +
-                    $"\tEquip Artifacts:\t\t {settings.EquipArtifacts}\n" +
-                    $"\tScan speed:\t\t\t\t {ScanSpeeds.LogText(settings.ScanSpeed)}";
-
-                Logger.Info("Scan settings: {0}", options);
-
-                scannerThread = new Thread(() =>
-                {
-                    try
-                    {
-                        // Get Screen Location and Size
-                        Navigation.Initialize();
-
-                        List<Size> sizes = new List<Size>
-                        {
-                            new Size(16,9),
-                            new Size(8,5),
-                        };
-
-                        if (!sizes.Contains(Navigation.GetAspectRatio()))
-                        {
-                            throw new NotImplementedException($"{Navigation.GetSize().Width}x{Navigation.GetSize().Height} is an unsupported resolution.");
-                        }
-
-                        if (Navigation.GetSize() != Navigation.CaptureWindow().Size) throw new FormatException("Window size and screenshot size mismatch. Please make sure the game is not in a fullscreen mode.");
-
-                        data = new InventoryKamera();
-
-                        Logger.Info("Resolution: {0}x{1}", Navigation.GetSize().Width, Navigation.GetSize().Height);
-
-                        // Add navigation delay
-                        Navigation.SetDelay(ScanSpeeds.Factor(Properties.Settings.Default.ScanSpeed));
-                        Navigation.AutoItemWait = ScanSpeeds.IsAuto(Properties.Settings.Default.ScanSpeed);
-
-
-                        // The Data object of json object
-                        data.GatherData();
-
-                        // Covert to GOOD
-                        GOOD good = new GOOD(data);
-                        Logger.Info("Data converted to GOOD");
-
-                        // Make Json File
-                        string outputFile = good.WriteToJSON(OutputPath_TextBox.Text);
-                        Logger.Info("Exported data");
-
-                        UserInterface.SetProgramStatus("Finished");
-                        // No "upload to Genshin Optimizer?" prompt after a scan. The
-                        // "Open Genshin Optimizer" button still does it on request.
-                        NotifyScanEnded("Scan complete",
-                            good.CompletionSummary(outputFile, UserInterface.ErrorCount), MessageBoxIcon.Information);
-                    }
-                    catch (ThreadAbortException)
-                    {
-                        // Workers can get stuck if the thread is aborted or an exception is raised
-                        data?.StopImageProcessorWorkers();
-                        UserInterface.SetProgramStatus("Scan stopped");
-                    }
-                    catch (NotImplementedException ex)
-                    {
-                        UserInterface.AddError(ex.ToString());
-                    }
-                    catch (Exception ex)
-                    {
-                        // Workers can get stuck if the thread is aborted or an exception is raised
-                        data?.StopImageProcessorWorkers();
-                        while (ex.InnerException != null) ex = ex.InnerException;
-                        UserInterface.AddError(ex.ToString());
-                        UserInterface.SetProgramStatus("Scan aborted", ok: false);
-                        NotifyScanEnded("Scan stopped",
-                            "The scan stopped because of an error:" + Environment.NewLine + ex.Message +
-                            Environment.NewLine + Environment.NewLine + "See the error log in the window for details.",
-                            MessageBoxIcon.Error);
-                    }
-                    finally
-                    {
-                        ResetUI();
-                        running = false;
-                        ManualExportButton.Invoke((MethodInvoker)delegate
-                        {
-                            ManualExportButton.Enabled = data.HasData;
-                        });
-                        MainForm_Activate();
-                    }
-                })
-                {
-                    IsBackground = true
-                };
-                scannerThread.Start();
-            }
-            else
-            {
-                if (string.IsNullOrWhiteSpace(OutputPath_TextBox.Text))
-                    UserInterface.AddError("Please set an output directory");
-                else
-                    UserInterface.AddError($"{OutputPath_TextBox.Text} is not a valid directory");
-            }
+            ScanSession.Start(OutputPath_TextBox.Text, this);
         }
 
         #region Scan-ended notification
@@ -406,7 +237,7 @@ namespace InventoryKamera
         // The game usually has focus when a scan ends, and Windows won't let this window jump in
         // front of it. So flash the taskbar button until the window is brought forward, and show
         // a summary popup (OK only, no questions).
-        private void NotifyScanEnded(string title, string message, MessageBoxIcon icon)
+        public void ScanEnded(string title, string message, MessageBoxIcon icon)
         {
             BeginInvoke((MethodInvoker)delegate
             {
@@ -491,8 +322,7 @@ namespace InventoryKamera
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             SaveSettings();
-            RemoveHotkey();
-            NLog.LogManager.Shutdown();
+            ScanSession.RemoveHotkey();
         }
 
         private void SaveSettings()
@@ -506,22 +336,12 @@ namespace InventoryKamera
         private ToolTip scanChoiceToolTip;  // pointing at a choice in the open list: that choice
         private int shownChoiceTip = -1;
 
-        // Fills the drop-down and selects the saved speed. The first time, an existing install's speed comes
-        // from the old slider's setting (Fast / Slower / Slow → Fastest / Normal / Slowest); a new install gets Auto.
+        // Fills the drop-down and selects the saved speed (its first-launch default is set by
+        // AppStartup.PrepareSettings: Auto for a new install, the old slider's speed for an upgrade).
         private void LoadScanSpeed()
         {
             var settings = Properties.Settings.Default;
-            bool hadSettings = Properties.JsonUserSettingsProvider.HadSettingsBeforeThisLaunch;
-            int step = ScanSpeeds.Stored(settings.ScanSpeed, settings.ScannerDelay, hadSettings);
-            if (settings.ScanSpeed != step)
-            {
-                if (hadSettings)
-                    Logger.Info("Scan speed set from the old Scanner Delay setting {0}: {1}", settings.ScannerDelay, ScanSpeeds.LogText(step));
-                else
-                    Logger.Info("New install: scan speed set to {0}", ScanSpeeds.LogText(step));
-                settings.ScanSpeed = step;
-                settings.Save();
-            }
+            int step = ScanSpeeds.Valid(settings.ScanSpeed);
 
             scanSpeedToolTip = new ToolTip(components) { AutoPopDelay = 30000 };
             scanChoiceToolTip = new ToolTip(components);
@@ -675,45 +495,7 @@ namespace InventoryKamera
 
         private async void DatabaseUpdateMenuItem_Click(object sender, EventArgs e)
         {
-            if (databaseManager.TablesMissing)
-            {
-                await DownloadMissingTablesAsync();   // the retry the "not downloaded" message points to
-                return;
-            }
-
-            var status = databaseManager.UpdateGameData();
-            switch (status)
-            {
-                case UpdateStatus.Fail:
-                    MessageBox.Show("Unable to update game data. Please check the log for more details", "Update failed", buttons: MessageBoxButtons.OK, icon: MessageBoxIcon.Stop);
-                    break;
-                case UpdateStatus.Success:
-                    MessageBox.Show($"Update for game version {databaseManager.LocalVersion.ToString(2)} successful.", "Update status", buttons: MessageBoxButtons.OK, icon: MessageBoxIcon.Information);
-                    Logger.Info("Updated game date to {0}", databaseManager.LocalVersion.ToString(2));
-                    break;
-                case UpdateStatus.Skipped:
-                    if (MessageBox.Show($"No update necessary! You are already using the latest game data ({databaseManager.LocalVersion.ToString(2)})." +
-                        $" Would you like to force an update?",
-                        "Already Up to Date",
-                        buttons: MessageBoxButtons.YesNo,
-                        icon: MessageBoxIcon.Information) == DialogResult.Yes)
-                    {
-                        status = databaseManager.UpdateGameData(force: true);
-                        switch (status)
-                        {
-                            case UpdateStatus.Fail:
-                                MessageBox.Show("Unable to update game data. Please check the log for more details", "Update failed", buttons: MessageBoxButtons.OK, icon: MessageBoxIcon.Stop);
-                                break;
-                            default:
-                                MessageBox.Show($"Update for game version {databaseManager.LocalVersion.ToString(2)} successful.", "Update success", buttons: MessageBoxButtons.OK, icon: MessageBoxIcon.Information);
-                                Logger.Info("Successfully updated game data to {0}", new DatabaseManager().LocalVersion.ToString(2));
-                                break;
-                        }
-                    }
-                    break;
-                default:
-                    break;
-            }
+            await AppStartup.UpdateLookupTablesAsync(this);
         }
 
         #region Unicode Helper Functions
@@ -765,126 +547,12 @@ namespace InventoryKamera
             }
         }
 
-        private async void MainForm_Shown(object sender, EventArgs e)
-        {
-            CheckForKameraUpdates();
-            if (databaseManager.TablesMissing)
-                await DownloadMissingTablesAsync();   // a new install: the data is the newest there is
-            else
-                CheckForGenshinUpdates();
-        }
-
-        // A new install (or one whose download failed) has no lookup tables. Download them with the window
-        // open and the step named on the status line, then say what arrived, or why nothing did.
-        private async System.Threading.Tasks.Task<bool> DownloadMissingTablesAsync()
-        {
-            UserInterface.SetProgramStatus(FirstDownload.Status);
-            Logger.Info("Lookup tables missing: downloading them");
-            DatabaseManager.RetryAfterUtc = null;
-            UpdateStatus status;
-            try
-            {
-                status = await System.Threading.Tasks.Task.Run(() => new DatabaseManager().UpdateGameData(force: true));
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(ex, "Could not download the lookup tables");
-                status = UpdateStatus.Fail;
-            }
-
-            databaseManager = new DatabaseManager();   // picks up the new version.txt
-            if (status != UpdateStatus.Fail && !databaseManager.TablesMissing)
-            {
-                GenshinProcesor.ReloadData();
-                foreach (var box in new[] { travelerNameTextBox, wandererNameTextBox, textBox1, textBox2 })
-                    ValidateCustomName(box, EventArgs.Empty);
-                string version = databaseManager.LocalVersion.ToString(2);
-                Logger.Info("Downloaded the lookup tables for game version {0}", version);
-                UserInterface.SetProgramStatus("");
-                MessageBox.Show(FirstDownload.SuccessText(version, databaseManager.TableCounts()), FirstDownload.SuccessTitle,
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return true;
-            }
-
-            Logger.Error("Lookup tables are still missing after the download");
-            UserInterface.SetProgramStatus(FirstDownload.MissingStatus, ok: false);
-            MessageBox.Show(FirstDownload.FailTextFor(DatabaseManager.RetryAfterUtc), FirstDownload.FailTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return false;
-        }
-
-        private async void CheckForKameraUpdates()
-        {
-            var client = new GitHubClient(new ProductHeaderValue("Inventory_Kamera"));
-            try
-            {
-                // Latest published, non-prerelease release of this fork.
-                var latest = await client.Repository.Release.GetLatest(ForkRepository.Owner, ForkRepository.Name);
-                Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
-                if (ForkRepository.IsNewerRelease(latest.TagName, currentVersion))
-                {
-                    var message = $"A new version of Inventory Kamera is available.\n\n" +
-                        $"Current Version: {currentVersion.ToString(3)}\nLatest Version: {latest.TagName}\n\n" +
-                        $"Would you like to download the update?";
-                    var result = MessageBox.Show(message, "Inventory Kamera Update", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                    if (result == DialogResult.Yes)
-                    {
-                        Process.Start(new ProcessStartInfo(latest.HtmlUrl) { UseShellExecute = true });
-                    }
-                }
-            }
-            catch (RateLimitExceededException) { Logger.Warn("Rate limit exceeded checking for Kamera Update!!!! This warning should be resolved in an hour."); }
-            catch (NotFoundException) { Logger.Info("No published release of {0}/{1} yet; skipping the update check.", ForkRepository.Owner, ForkRepository.Name); }
-            // Offline, GitHub down, etc.: an update check must never stop the app from starting.
-            catch (Exception ex) { Logger.Warn(ex, "Could not check for Kamera updates."); }
-
-        }
-
-        private void CheckForGenshinUpdates()
-        {
-            var databaseManager = new DatabaseManager();
-            try
-            {
-                var updatesAvailable = databaseManager.UpdateAvailable();
-                if (updatesAvailable)
-                {
-                    var message = "A new version for Genshin Impact has been found. Would you like to update Kamera's lookup tables? (Recommended)";
-                    var result = MessageBox.Show(message, "Game Version Update", MessageBoxButtons.YesNo);
-                    if (result == DialogResult.Yes)
-                    {
-                        switch (databaseManager.UpdateGameData())
-                        {
-                            case UpdateStatus.Fail:
-                                MessageBox.Show("Unable to update game data. Please check the log for more details", "Update failed", buttons: MessageBoxButtons.OK, icon: MessageBoxIcon.Stop);
-                                break;
-                            case UpdateStatus.Success:
-                                MessageBox.Show($"Update for game version {databaseManager.LocalVersion.ToString(2) } successful.", "Update status", buttons: MessageBoxButtons.OK, icon: MessageBoxIcon.Information);
-                                Logger.Info("Updated game data to {0}", databaseManager.LocalVersion.ToString(2));
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                    else if (result == DialogResult.No)
-                    {
-                        MessageBox.Show("Update skipped. Please know that skipping this update will likely result in incorrect scans.\n" +
-                            "\nYou may check for updates again on restarting this application or by using the update manager found" +
-                            " under 'options'", "Update declined", MessageBoxButtons.OK);
-                    }
-                }
-                else
-                    Logger.Info("Current game data is up to date with data for {0}", databaseManager.LocalVersion.ToString(2));
-            }
-            catch (Exception ex)
-            {
-                Logger.Warn(ex, "Could not check for list updates");
-                MessageBox.Show("Could not check for updates. Consider trying again in an hour or so.", "Game Version Update", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            Properties.Settings.Default.LastUpdateCheck = DateTime.Now;
-        }
+        // The update checks and the first download run once per launch from LookContext, whatever look is open.
+        private void MainForm_Shown(object sender, EventArgs e) { }
 
         private void Export_Button_Click(object sender, EventArgs e)
         {
-            OpenOptimizerDialog(new GOOD(data));
+            OpenOptimizerDialog(new GOOD(ScanSession.Data));
         }
 
         private void MainForm_Activate()

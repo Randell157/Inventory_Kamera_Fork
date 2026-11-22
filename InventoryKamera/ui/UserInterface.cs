@@ -40,6 +40,25 @@ namespace InventoryKamera
 		// Current Images
 		private static PictureBox navigation_PictureBox;
 
+		// 1.7: the counts and status are kept here, not only in labels, so a look without some of these
+		// controls (Simple has no item images or text output) still tracks them and can show them its own
+		// way. Any control passed to Init may be null; updates to a missing control are skipped.
+		private static int weapons, weaponsMax = -1, artifacts, artifactsMax = -1, characters;
+
+		internal static int Weapons => System.Threading.Volatile.Read(ref weapons);
+		internal static int WeaponsMax => System.Threading.Volatile.Read(ref weaponsMax);   // -1: not known yet
+		internal static int Artifacts => System.Threading.Volatile.Read(ref artifacts);
+		internal static int ArtifactsMax => System.Threading.Volatile.Read(ref artifactsMax);
+		internal static int Characters => System.Threading.Volatile.Read(ref characters);
+
+		internal static string Status { get; private set; } = "";
+		internal static Color StatusColor { get; private set; } = Color.Empty;
+
+		// Raised on the thread that made the change (often the scan thread).
+		internal static event Action CountsChanged;
+		internal static event Action StatusChanged;
+		internal static event Action ErrorsChanged;
+
 		public static void Init(PictureBox _gear_PictureBox, TextBox _a_textbox, PictureBox _c_name, PictureBox _c_level, PictureBox[] _c_talent, TextBox _c_textbox, Label _weaponCount, Label _weaponMax, Label _artifactCount, Label _artifactMax, Label _characterCount, Label _programStatus, TextBox _error_textBox, PictureBox _navigation_Image)
 		{
 			// Artifacts and Weapons
@@ -77,6 +96,7 @@ namespace InventoryKamera
 
 		private static void UpdatePictureBox(Bitmap bm, PictureBox pictureBox)
 		{
+			if (pictureBox == null) return;
 			try
 			{
 				Bitmap clone = new Bitmap(bm.Width, bm.Height);
@@ -99,6 +119,7 @@ namespace InventoryKamera
 
 		private static void UpdateTextBox(string text, TextBox textBox)
 		{
+			if (textBox == null) return;
 			try
 			{
 				MethodInvoker textBoxAction = delegate
@@ -117,6 +138,7 @@ namespace InventoryKamera
 
 		private static void UpdateLabel(string text, Label label)
 		{
+			if (label == null) return;
 			try
 			{
 				MethodInvoker labelAction =  delegate
@@ -191,7 +213,7 @@ namespace InventoryKamera
 
 		public static void SetCharacter_Talent(Bitmap bm, string text, int i)
 		{
-			if (i > -1 && i < 3)
+			if (i > -1 && i < 3 && cTalent_PictureBoxes != null)
 			{
 				UpdatePictureBox(bm, cTalent_PictureBoxes[i]);
 				UpdateTextBox($"Talent {i + 1}: {text}", character_TextBox);
@@ -200,38 +222,36 @@ namespace InventoryKamera
 
 		public static void SetWeapon_Max(int value)
 		{
+			System.Threading.Volatile.Write(ref weaponsMax, value);
 			UpdateLabel(value.ToString(), weaponMax_Label);
+			CountsChanged?.Invoke();
 			Logger.Info("Parsed {value} weapons to scan", value);
 		}
 
 		public static void SetArtifact_Max(int value)
 		{
+			System.Threading.Volatile.Write(ref artifactsMax, value);
 			UpdateLabel(value.ToString(), artifactMax_Label);
+			CountsChanged?.Invoke();
 			Logger.Info("Parsed {value} artifacts to scan", value);
 		}
 
 		public static void IncrementArtifactCount()
 		{
-			lock (artifactCount_Label)
-			{
-				UpdateLabel($"{Int32.Parse(artifactCount_Label.Text) + 1}", artifactCount_Label);
-			}
+			UpdateLabel(System.Threading.Interlocked.Increment(ref artifacts).ToString(), artifactCount_Label);
+			CountsChanged?.Invoke();
 		}
 
 		public static void IncrementWeaponCount()
 		{
-			lock (weaponCount_Label)
-			{
-				UpdateLabel($"{Int32.Parse(weaponCount_Label.Text) + 1}", weaponCount_Label);
-			}
+			UpdateLabel(System.Threading.Interlocked.Increment(ref weapons).ToString(), weaponCount_Label);
+			CountsChanged?.Invoke();
 		}
 
 		public static void IncrementCharacterCount()
 		{
-			lock (characterCount_Label)
-			{
-				UpdateLabel($"{Int32.Parse(characterCount_Label.Text) + 1}", characterCount_Label);
-			}
+			UpdateLabel(System.Threading.Interlocked.Increment(ref characters).ToString(), characterCount_Label);
+			CountsChanged?.Invoke();
 		}
 
 		// Amber for a step that prepares the scan, so it reads differently from "Scanning".
@@ -277,6 +297,11 @@ namespace InventoryKamera
 
 		public static void SetProgramStatus(string status, Color color)
 		{
+			Status = status ?? "";
+			StatusColor = color;
+			StatusChanged?.Invoke();
+			if (programStatus_Label == null) return;
+
 			MethodInvoker statusAction = delegate
 			{
 				if (statusTop < 0) statusTop = programStatus_Label.Top;
@@ -301,6 +326,7 @@ namespace InventoryKamera
 			System.Threading.Interlocked.Increment(ref errorCount);
 			UpdateTextBox($"{error.Replace("\n", Environment.NewLine)}" + Environment.NewLine, error_TextBox);
 			Logger.Error(error);
+			ErrorsChanged?.Invoke();
 		}
 
 		public static void SetNavigation_Image(Bitmap bm)
@@ -308,54 +334,49 @@ namespace InventoryKamera
 			UpdatePictureBox(bm, navigation_PictureBox);
 		}
 
+		// Runs an action on a control's thread; skipped when the open look has no such control.
+		private static void OnControl(Control control, MethodInvoker action)
+		{
+			if (control != null) control.Invoke(action);
+		}
+
 		public static void ResetCharacterDisplay()
 		{
-			MethodInvoker nameAction = delegate { cName_PictureBox.Image = null; };
-			MethodInvoker levelAction = delegate { cLevel_PictureBox.Image = null; };
-			MethodInvoker talentAction_1 = delegate { cTalent_PictureBoxes[0].Image = null; };
-			MethodInvoker talentAction_2 = delegate { cTalent_PictureBoxes[1].Image = null; };
-			MethodInvoker talentAction_3 = delegate { cTalent_PictureBoxes[2].Image = null; };
-			MethodInvoker textAction = delegate { character_TextBox.Clear(); };
-
-			cName_PictureBox.Invoke(nameAction);
-			cLevel_PictureBox.Invoke(levelAction);
-			cTalent_PictureBoxes[0].Invoke(talentAction_1);
-			cTalent_PictureBoxes[1].Invoke(talentAction_2);
-			cTalent_PictureBoxes[2].Invoke(talentAction_3);
-			character_TextBox.Invoke(textAction);
+			OnControl(cName_PictureBox, delegate { cName_PictureBox.Image = null; });
+			OnControl(cLevel_PictureBox, delegate { cLevel_PictureBox.Image = null; });
+			if (cTalent_PictureBoxes != null)
+				foreach (var talent in cTalent_PictureBoxes)
+					OnControl(talent, delegate { talent.Image = null; });
+			OnControl(character_TextBox, delegate { character_TextBox.Clear(); });
 		}
 
 		public static void ResetGearDisplay()
 		{
-			MethodInvoker gearAction = delegate { gear_PictureBox.Image = null; };
-
-			MethodInvoker textAction = delegate { gear_TextBox.Clear(); };
-
-			gear_PictureBox.Invoke(gearAction);
-			gear_TextBox.Invoke(textAction);
+			OnControl(gear_PictureBox, delegate { gear_PictureBox.Image = null; });
+			OnControl(gear_TextBox, delegate { gear_TextBox.Clear(); });
 		}
 
 		public static void ResetCounters()
 		{
-			MethodInvoker characterCountAction = delegate { characterCount_Label.Text = "0"; weaponMax_Label.Refresh(); };
-			MethodInvoker weaponCountAction = delegate { weaponCount_Label.Text = "0"; weaponMax_Label.Refresh(); };
-			MethodInvoker weaponMaxAction = delegate { weaponMax_Label.Text = "?"; weaponMax_Label.Refresh(); };
-			MethodInvoker artifactCountAction = delegate { artifactCount_Label.Text = "0"; artifactMax_Label.Refresh(); };
-			MethodInvoker artifactMaxAction = delegate { artifactMax_Label.Text = "?"; artifactMax_Label.Refresh(); };
+			System.Threading.Interlocked.Exchange(ref weapons, 0);
+			System.Threading.Interlocked.Exchange(ref weaponsMax, -1);
+			System.Threading.Interlocked.Exchange(ref artifacts, 0);
+			System.Threading.Interlocked.Exchange(ref artifactsMax, -1);
+			System.Threading.Interlocked.Exchange(ref characters, 0);
 
-			characterCount_Label.Invoke(characterCountAction);
-			weaponCount_Label.Invoke(weaponCountAction);
-			weaponMax_Label.Invoke(weaponMaxAction);
-			artifactCount_Label.Invoke(artifactCountAction);
-			artifactMax_Label.Invoke(artifactMaxAction);
+			OnControl(characterCount_Label, delegate { characterCount_Label.Text = "0"; characterCount_Label.Refresh(); });
+			OnControl(weaponCount_Label, delegate { weaponCount_Label.Text = "0"; weaponCount_Label.Refresh(); });
+			OnControl(weaponMax_Label, delegate { weaponMax_Label.Text = "?"; weaponMax_Label.Refresh(); });
+			OnControl(artifactCount_Label, delegate { artifactCount_Label.Text = "0"; artifactCount_Label.Refresh(); });
+			OnControl(artifactMax_Label, delegate { artifactMax_Label.Text = "?"; artifactMax_Label.Refresh(); });
+			CountsChanged?.Invoke();
 		}
 
 		public static void ResetErrors()
 		{
 			System.Threading.Interlocked.Exchange(ref errorCount, 0);
-			MethodInvoker textAction = delegate { error_TextBox.Clear(); };
-
-			error_TextBox.Invoke(textAction);
+			OnControl(error_TextBox, delegate { error_TextBox.Clear(); });
+			ErrorsChanged?.Invoke();
 		}
 
 		public static void ResetAll()

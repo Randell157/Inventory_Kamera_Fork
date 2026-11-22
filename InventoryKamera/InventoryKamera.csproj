@@ -101,6 +101,10 @@
     <Compile Include="scraping\GenshinProcesor.cs" />
     <Compile Include="scraping\LevelReading.cs" />
     <Compile Include="ui\UserInterface.cs" />
+    <Compile Include="ui\AppStartup.cs" />
+    <Compile Include="ui\LookContext.cs" />
+    <Compile Include="ui\Looks.cs" />
+    <Compile Include="ui\ScanSession.cs" />
     <Compile Include="game\Weapon.cs" />
     <Compile Include="scraping\WeaponScraper.cs" />
     <Compile Include="Properties\Resources.Designer.cs">

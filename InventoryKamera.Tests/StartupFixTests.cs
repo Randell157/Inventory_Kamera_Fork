@@ -105,18 +105,18 @@ namespace InventoryKamera.Tests
         [TestMethod]
         public void MouseButtonKeyCodesFallBackToTheDefaultKey()
         {
-            Assert.AreEqual((int)Keys.D1, MainForm.KeyOrDefault(1, Keys.D1), "old slot 1 default (left mouse button)");
-            Assert.AreEqual((int)Keys.D1, MainForm.KeyOrDefault(0, Keys.D1));
-            Assert.AreEqual((int)Keys.D1, MainForm.KeyOrDefault(6, Keys.D1));
+            Assert.AreEqual((int)Keys.D1, AppStartup.KeyOrDefault(1, Keys.D1), "old slot 1 default (left mouse button)");
+            Assert.AreEqual((int)Keys.D1, AppStartup.KeyOrDefault(0, Keys.D1));
+            Assert.AreEqual((int)Keys.D1, AppStartup.KeyOrDefault(6, Keys.D1));
         }
 
         [TestMethod]
         public void RealKeyCodesAreKept()
         {
-            Assert.AreEqual(49, MainForm.KeyOrDefault(49, Keys.D1));
-            Assert.AreEqual(66, MainForm.KeyOrDefault(66, Keys.B));
-            Assert.AreEqual(67, MainForm.KeyOrDefault(67, Keys.C));
-            Assert.AreEqual((int)Keys.D2, MainForm.KeyOrDefault((int)Keys.D2, Keys.D1), "a key the user chose");
+            Assert.AreEqual(49, AppStartup.KeyOrDefault(49, Keys.D1));
+            Assert.AreEqual(66, AppStartup.KeyOrDefault(66, Keys.B));
+            Assert.AreEqual(67, AppStartup.KeyOrDefault(67, Keys.C));
+            Assert.AreEqual((int)Keys.D2, AppStartup.KeyOrDefault((int)Keys.D2, Keys.D1), "a key the user chose");
         }
 
         [TestMethod]
