@@ -42,10 +42,11 @@ namespace InventoryKamera
 			}
 		}
 
-		// The step to use: the "ScanSpeed" setting once it's set (default -1), otherwise the old slider's
-		// setting. That one is left untouched, because the 1.4.5 install reads the same settings file.
-		internal static int Stored(int scanSpeed, int scannerDelay) =>
-			scanSpeed >= 0 && scanSpeed <= Auto ? scanSpeed : FromScannerDelay(scannerDelay);
+		// The step to use: the "ScanSpeed" setting once it's set (default -1). Otherwise, for an install
+		// that already had settings, the old slider's setting, which is left untouched because the 1.4.5
+		// install reads the same settings file; for a brand-new install (no settings yet), Auto.
+		internal static int Stored(int scanSpeed, int scannerDelay, bool hadSettings) =>
+			scanSpeed >= 0 && scanSpeed <= Auto ? scanSpeed : hadSettings ? FromScannerDelay(scannerDelay) : Auto;
 
 		internal static double WaitMs(int step, Navigation.Speed speed) => Navigation.BaseWait(speed) * Factor(step);
 

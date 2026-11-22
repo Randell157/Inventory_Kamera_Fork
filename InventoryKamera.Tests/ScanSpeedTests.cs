@@ -42,11 +42,48 @@ namespace InventoryKamera.Tests
         [TestMethod]
         public void SavedSpeedWinsOnceSet()
         {
-            Assert.AreEqual(0, ScanSpeeds.Stored(-1, 0), "first launch: from the old setting");
-            Assert.AreEqual(4, ScanSpeeds.Stored(-1, 2));
-            Assert.AreEqual(3, ScanSpeeds.Stored(3, 0), "after that: the drop-down's own setting");
-            Assert.AreEqual(2, ScanSpeeds.Stored(12, 1), "a broken value is replaced from the old setting");
-            Assert.AreEqual(ScanSpeeds.Auto, ScanSpeeds.Stored(ScanSpeeds.Auto, 0), "Auto is kept");
+            // An upgrader (settings already there) gets the old slider's speed the first time.
+            Assert.AreEqual(0, ScanSpeeds.Stored(-1, 0, hadSettings: true), "first launch: from the old setting");
+            Assert.AreEqual(2, ScanSpeeds.Stored(-1, 1, hadSettings: true));
+            Assert.AreEqual(4, ScanSpeeds.Stored(-1, 2, hadSettings: true));
+            Assert.AreEqual(2, ScanSpeeds.Stored(12, 1, hadSettings: true), "a broken value is replaced from the old setting");
+            // A saved speed always wins, new install or not.
+            foreach (bool had in new[] { true, false })
+            {
+                Assert.AreEqual(3, ScanSpeeds.Stored(3, 0, had), "after that: the drop-down's own setting");
+                Assert.AreEqual(0, ScanSpeeds.Stored(0, 2, had), "a saved Fastest stays");
+                Assert.AreEqual(ScanSpeeds.Auto, ScanSpeeds.Stored(ScanSpeeds.Auto, 0, had), "Auto is kept");
+            }
+        }
+
+        [TestMethod]
+        public void NewInstallStartsOnAuto()
+        {
+            // 1.6.1: with no settings file, ScannerDelay's default 0 used to give Fastest.
+            for (int old = 0; old <= 2; old++)
+                Assert.AreEqual(ScanSpeeds.Auto, ScanSpeeds.Stored(-1, old, hadSettings: false));
+        }
+
+        [TestMethod]
+        public void OnlyAReadableSettingsFileCounts()
+        {
+            string dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "IK-settings-" + System.Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(dir);
+            try
+            {
+                string file = System.IO.Path.Combine(dir, "settings.json");
+                Assert.IsFalse(Properties.JsonUserSettingsProvider.TryRead(file, out var none), "missing");
+                Assert.AreEqual(0, none.Count);
+
+                System.IO.File.WriteAllText(file, "{ not json");
+                Assert.IsFalse(Properties.JsonUserSettingsProvider.TryRead(file, out var broken), "broken JSON");
+                Assert.AreEqual(0, broken.Count);
+
+                System.IO.File.WriteAllText(file, "{ \"ScannerDelay\": \"2\" }");
+                Assert.IsTrue(Properties.JsonUserSettingsProvider.TryRead(file, out var ok), "readable");
+                Assert.AreEqual("2", ok["ScannerDelay"].ToString());
+            }
+            finally { System.IO.Directory.Delete(dir, true); }
         }
 
         [TestMethod]

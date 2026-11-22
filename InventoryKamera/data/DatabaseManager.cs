@@ -89,14 +89,25 @@ namespace InventoryKamera
 
             LocalVersion = new Version(File.ReadAllText(ListsDir + NewVersion));
 
+            // Missing tables are no longer downloaded here: this ran while the window was being built,
+            // so a new install waited with nothing on screen, and a failed download crashed the startup.
+            // The main window downloads them once it's shown (MainForm.DownloadMissingTablesAsync).
+        }
 
-            if (!(File.Exists(ListsDir + WeaponsJson) &&
-                File.Exists(ListsDir + ArtifactsJson) &&
-                File.Exists(ListsDir + CharactersJson) &&
-                File.Exists(ListsDir + MaterialsJson)))
-            {
-                UpdateGameData(force: true);
-            }
+        private static readonly string[] TableFiles = { WeaponsJson, ArtifactsJson, CharactersJson, MaterialsJson };
+
+        // True when any of the four lookup tables is missing or empty (a new install, or a failed download).
+        public bool TablesMissing => TableFiles.Any(f =>
+        {
+            var path = ListsDir + f;
+            return !File.Exists(path) || File.ReadAllText(path).Trim().Length <= 2;   // "" or "{}"
+        });
+
+        // How many entries each saved table has, for the "New game data" message.
+        public (int Characters, int Weapons, int ArtifactSets, int Materials) TableCounts()
+        {
+            int Count(string file) => JObject.Parse(File.ReadAllText(ListsDir + file)).Count;
+            return (Count(CharactersJson), Count(WeaponsJson), Count(ArtifactsJson), Count(MaterialsJson));
         }
 
         public bool UpdateAvailable()
@@ -299,13 +310,34 @@ namespace InventoryKamera
                     json = client.DownloadString(url);
                 }
             }
-            catch (Exception)
+            catch (WebException e) when (e.Response is HttpWebResponse response && (int)response.StatusCode == 429)
             {
-
+                // GitLab's limit for downloads without an account. Its answer says how long to wait.
+                var retry = RetryTime(response.Headers["Retry-After"], DateTime.UtcNow);
+                if (retry != null)
+                {
+                    RetryAfterUtc = retry;
+                    Logger.Warn("GitLab asked to wait until {0:t} ({1}) before downloading again", FirstDownload.RoundUpToMinute(retry.Value.ToLocalTime()), response.Headers["ratelimit-name"]);
+                }
                 throw;
             }
-            
+
             return json;
+        }
+
+        // When GitLab last asked to wait until (UTC), from a 429 answer's Retry-After; null when it hasn't.
+        public static DateTime? RetryAfterUtc { get; set; }
+
+        // Retry-After is either a number of seconds or an HTTP date. Null when missing or unreadable.
+        internal static DateTime? RetryTime(string retryAfter, DateTime nowUtc)
+        {
+            if (string.IsNullOrWhiteSpace(retryAfter)) return null;
+            if (int.TryParse(retryAfter.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out int seconds))
+                return nowUtc.AddSeconds(seconds);
+            if (DateTime.TryParseExact(retryAfter.Trim(), "r", CultureInfo.InvariantCulture,
+                    DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out DateTime date))
+                return date;
+            return null;
         }
 
         private UpdateStatus UpdateList(ListType list, bool force = false)

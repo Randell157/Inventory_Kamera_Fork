@@ -265,6 +265,14 @@ namespace InventoryKamera
         {
             GC.Collect();
 
+            if (new DatabaseManager().TablesMissing)
+            {
+                Logger.Warn("Scan not started: the lookup tables are missing");
+                UserInterface.SetProgramStatus(FirstDownload.MissingStatus, ok: false);
+                MessageBox.Show(FirstDownload.FailTextFor(DatabaseManager.RetryAfterUtc), FirstDownload.FailTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             UserInterface.ResetAll();
 
             UserInterface.SetProgramStatus("Scanning");
@@ -498,15 +506,19 @@ namespace InventoryKamera
         private ToolTip scanChoiceToolTip;  // pointing at a choice in the open list: that choice
         private int shownChoiceTip = -1;
 
-        // Fills the drop-down and selects the saved speed. The first time, the speed comes from the old
-        // slider's setting (Fast / Slower / Slow → Fastest / Normal / Slowest).
+        // Fills the drop-down and selects the saved speed. The first time, an existing install's speed comes
+        // from the old slider's setting (Fast / Slower / Slow → Fastest / Normal / Slowest); a new install gets Auto.
         private void LoadScanSpeed()
         {
             var settings = Properties.Settings.Default;
-            int step = ScanSpeeds.Stored(settings.ScanSpeed, settings.ScannerDelay);
+            bool hadSettings = Properties.JsonUserSettingsProvider.HadSettingsBeforeThisLaunch;
+            int step = ScanSpeeds.Stored(settings.ScanSpeed, settings.ScannerDelay, hadSettings);
             if (settings.ScanSpeed != step)
             {
-                Logger.Info("Scan speed set from the old Scanner Delay setting {0}: {1}", settings.ScannerDelay, ScanSpeeds.LogText(step));
+                if (hadSettings)
+                    Logger.Info("Scan speed set from the old Scanner Delay setting {0}: {1}", settings.ScannerDelay, ScanSpeeds.LogText(step));
+                else
+                    Logger.Info("New install: scan speed set to {0}", ScanSpeeds.LogText(step));
                 settings.ScanSpeed = step;
                 settings.Save();
             }
@@ -661,8 +673,14 @@ namespace InventoryKamera
             }
         }
 
-        private void DatabaseUpdateMenuItem_Click(object sender, EventArgs e)
+        private async void DatabaseUpdateMenuItem_Click(object sender, EventArgs e)
         {
+            if (databaseManager.TablesMissing)
+            {
+                await DownloadMissingTablesAsync();   // the retry the "not downloaded" message points to
+                return;
+            }
+
             var status = databaseManager.UpdateGameData();
             switch (status)
             {
@@ -747,10 +765,51 @@ namespace InventoryKamera
             }
         }
 
-        private void MainForm_Shown(object sender, EventArgs e)
+        private async void MainForm_Shown(object sender, EventArgs e)
         {
             CheckForKameraUpdates();
-            CheckForGenshinUpdates();
+            if (databaseManager.TablesMissing)
+                await DownloadMissingTablesAsync();   // a new install: the data is the newest there is
+            else
+                CheckForGenshinUpdates();
+        }
+
+        // A new install (or one whose download failed) has no lookup tables. Download them with the window
+        // open and the step named on the status line, then say what arrived, or why nothing did.
+        private async System.Threading.Tasks.Task<bool> DownloadMissingTablesAsync()
+        {
+            UserInterface.SetProgramStatus(FirstDownload.Status);
+            Logger.Info("Lookup tables missing: downloading them");
+            DatabaseManager.RetryAfterUtc = null;
+            UpdateStatus status;
+            try
+            {
+                status = await System.Threading.Tasks.Task.Run(() => new DatabaseManager().UpdateGameData(force: true));
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Could not download the lookup tables");
+                status = UpdateStatus.Fail;
+            }
+
+            databaseManager = new DatabaseManager();   // picks up the new version.txt
+            if (status != UpdateStatus.Fail && !databaseManager.TablesMissing)
+            {
+                GenshinProcesor.ReloadData();
+                foreach (var box in new[] { travelerNameTextBox, wandererNameTextBox, textBox1, textBox2 })
+                    ValidateCustomName(box, EventArgs.Empty);
+                string version = databaseManager.LocalVersion.ToString(2);
+                Logger.Info("Downloaded the lookup tables for game version {0}", version);
+                UserInterface.SetProgramStatus("");
+                MessageBox.Show(FirstDownload.SuccessText(version, databaseManager.TableCounts()), FirstDownload.SuccessTitle,
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return true;
+            }
+
+            Logger.Error("Lookup tables are still missing after the download");
+            UserInterface.SetProgramStatus(FirstDownload.MissingStatus, ok: false);
+            MessageBox.Show(FirstDownload.FailTextFor(DatabaseManager.RetryAfterUtc), FirstDownload.FailTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return false;
         }
 
         private async void CheckForKameraUpdates()

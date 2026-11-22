@@ -106,6 +106,20 @@ namespace InventoryKamera
         {
 			var listManager = new DatabaseManager();
 
+			if (listManager.TablesMissing)
+			{
+				// A new install before its first download (or after a failed one): empty lists keep the
+				// window working; the main window downloads the tables and calls this again.
+				Logger.Warn("Lookup tables are missing; starting with empty lists until they are downloaded");
+				Characters = new Dictionary<string, JObject>();
+				AddMannequins(Characters);
+				Artifacts = new Dictionary<string, JObject>();
+				Weapons = new Dictionary<string, string>();
+				DevItems = new Dictionary<string, string>();
+				Materials = new Dictionary<string, string>();
+				return;
+			}
+
 			Characters = listManager.LoadCharacters();
 			AddMannequins(Characters);
 			Artifacts = listManager.LoadArtifacts();

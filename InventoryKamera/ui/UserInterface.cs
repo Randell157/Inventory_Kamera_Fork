@@ -249,13 +249,42 @@ namespace InventoryKamera
 		public static void SetProgramStatus(string status, bool ok = true) =>
 			SetProgramStatus(status, ok ? OkColor : ErrorColor);
 
+		// The status line has 148 × 36 px: left of the output panel, between the speed hint and the Scan button.
+		internal const int StatusWidth = 148, StatusHeight = 36;
+		internal const float StatusSize = 15, StatusSmallSize = 11;
+		private static int statusTop = -1;
+
+		// A status that fits on one line stays at 15 pt. A longer one ("Downloading lookup tables…") drops to
+		// 11 pt and is split onto two lines, the first as long as fits, so it isn't cut off by the panel.
+		internal static (float Size, string Text) FitStatus(string status, FontFamily family)
+		{
+			if (string.IsNullOrEmpty(status)) return (StatusSize, status);
+			using (var big = new Font(family, StatusSize))
+				if (TextRenderer.MeasureText(status, big).Width <= StatusWidth) return (StatusSize, status);
+
+			using (var small = new Font(family, StatusSmallSize))
+			{
+				var words = status.Split(' ');
+				for (int split = words.Length - 1; split > 0; split--)
+				{
+					string first = string.Join(" ", words, 0, split), second = string.Join(" ", words, split, words.Length - split);
+					if (TextRenderer.MeasureText(first, small).Width <= StatusWidth && TextRenderer.MeasureText(second, small).Width <= StatusWidth)
+						return (StatusSmallSize, first + "\n" + second);
+				}
+			}
+			return (StatusSmallSize, status);   // a single long word: smaller is the best we can do
+		}
+
 		public static void SetProgramStatus(string status, Color color)
 		{
 			MethodInvoker statusAction = delegate
 			{
-				programStatus_Label.Text = status;
+				if (statusTop < 0) statusTop = programStatus_Label.Top;
+				var (size, text) = FitStatus(status, programStatus_Label.Font.FontFamily);
+				programStatus_Label.Text = text;
 				programStatus_Label.ForeColor = color;
-				programStatus_Label.Font = new Font(programStatus_Label.Font.FontFamily, 15);
+				programStatus_Label.Font = new Font(programStatus_Label.Font.FontFamily, size);
+				programStatus_Label.Top = text != null && text.Contains("\n") ? statusTop - 3 : statusTop;   // two lines end above the Scan button
 				programStatus_Label.Refresh();
 			};
 

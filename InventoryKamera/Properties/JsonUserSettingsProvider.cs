@@ -28,6 +28,29 @@ namespace InventoryKamera.Properties
 
         private static List<SettingsSerializeAs> validSerializations;
 
+        private static bool? hadSettingsBeforeThisLaunch;
+
+        // Whether a readable settings file was there the first time settings were read in this launch.
+        // Recorded then, because the window saves settings before the scan speed is loaded, which would
+        // make every launch look like an existing install. False means a brand-new install (or a broken file).
+        public static bool HadSettingsBeforeThisLaunch => hadSettingsBeforeThisLaunch ?? false;
+
+        // Reads a settings file. False, with empty settings, when it is missing or not valid JSON.
+        internal static bool TryRead(string path, out JObject settings)
+        {
+            settings = new JObject();
+            if (!File.Exists(path)) return false;
+            try
+            {
+                settings = JObject.Parse(File.ReadAllText(path));
+                return true;
+            }
+            catch (JsonReaderException)
+            {
+                return false;   // Using default settings because the file isn't valid JSON
+            }
+        }
+
         public override string ApplicationName
         {
             get => Path.GetFileNameWithoutExtension(Application.ExecutablePath);
@@ -47,21 +70,10 @@ namespace InventoryKamera.Properties
         {
             var values = new SettingsPropertyValueCollection();
 
-            var settingsJson = new JObject();
-
             Directory.CreateDirectory(SettingsDirectory);
 
-            if (File.Exists(SettingsFile))
-            {
-                try
-                {
-                    settingsJson = JObject.Parse(File.ReadAllText(SettingsFile));
-                }
-                catch (JsonReaderException)
-                {
-                    // Using default setting cause file isn't valid JSON
-                }
-            }
+            bool readable = TryRead(SettingsFile, out JObject settingsJson);
+            if (hadSettingsBeforeThisLaunch == null) hadSettingsBeforeThisLaunch = readable;
 
             foreach (SettingsProperty property in properties)
             {
