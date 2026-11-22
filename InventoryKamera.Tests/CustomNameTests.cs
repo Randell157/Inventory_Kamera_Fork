@@ -29,7 +29,7 @@ namespace InventoryKamera.Tests
             Assert.IsFalse(GenshinProcesor.NameBelongsToAnotherCharacter("Manequin1", "manequin1"));
             Assert.IsFalse(GenshinProcesor.NameBelongsToAnotherCharacter("Manequin2", "manequin2"));
             Assert.IsFalse(GenshinProcesor.NameBelongsToAnotherCharacter("Traveler", "traveler"));
-            Assert.IsFalse(GenshinProcesor.NameBelongsToAnotherCharacter("Randell", "traveler"), "a name no character has");
+            Assert.IsFalse(GenshinProcesor.NameBelongsToAnotherCharacter("Aster", "traveler"), "a name no character has");
             Assert.IsFalse(GenshinProcesor.NameBelongsToAnotherCharacter("", "wanderer"));
             Assert.IsFalse(GenshinProcesor.NameBelongsToAnotherCharacter("   ", "manequin1"));
             Assert.IsFalse(GenshinProcesor.NameBelongsToAnotherCharacter(null, "traveler"));

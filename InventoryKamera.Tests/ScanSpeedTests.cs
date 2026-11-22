@@ -84,8 +84,9 @@ namespace InventoryKamera.Tests
                 "Waiting for 1,000 items: depends on your PC\n" +
                 "\n" +
                 "Auto: waits only as long as each card and character\n" +
-                "screen needs, so it is fast and reliable, but it is new and\n" +
-                "needs a live check.",
+                "screen needs, so it is usually both the fastest and\n" +
+                "the most reliable choice. If it misreads on a busy PC,\n" +
+                "try a fixed speed.",
                 ScanSpeeds.TooltipText(a, forChoice: true));
         }
 

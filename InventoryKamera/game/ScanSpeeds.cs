@@ -98,8 +98,9 @@ namespace InventoryKamera
 
 		private const string AutoTradeoffs =
 			"Auto: waits only as long as each card and character\n" +
-			"screen needs, so it is fast and reliable, but it is new and\n" +
-			"needs a live check.";
+			"screen needs, so it is usually both the fastest and\n" +
+			"the most reliable choice. If it misreads on a busy PC,\n" +
+			"try a fixed speed.";
 
 		// The hover text. For the current setting the heading is "Waits at this setting:"; for a choice
 		// pointed at in the open list it names that choice.
