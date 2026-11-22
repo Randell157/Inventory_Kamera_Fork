@@ -76,6 +76,17 @@ namespace InventoryKamera.Tests
 		}
 
 		[TestMethod]
+		public void ReleasePageLinkOpensOnlyThisRepo()
+		{
+			const string page = "https://github.com/Randell157/Inventory_Kamera_Fork/releases/tag/v1.7.0";
+			Assert.AreEqual(page, UpdatesForm.ReleasePageUrl(page));
+			foreach (string bad in new[] { "calc.exe", @"C:\Windows\System32\cmd.exe", "file:///C:/Windows/System32/cmd.exe",
+				"https://github.com/someone/Inventory_Kamera/releases/tag/v9", "http://github.com/Randell157/Inventory_Kamera_Fork/releases",
+				"https://github.com/Randell157/Inventory_Kamera_Fork/../../evil", "https://github.com/Randell157/Inventory_Kamera_Fork.evil.com/", "", null })
+				Assert.AreEqual(ForkRepository.ReleasesUrl, UpdatesForm.ReleasePageUrl(bad), bad ?? "null");
+		}
+
+		[TestMethod]
 		public void DigestsAndReleaseJson()
 		{
 			string hex = new string('a', 64);

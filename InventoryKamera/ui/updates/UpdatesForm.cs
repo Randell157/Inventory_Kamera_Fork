@@ -390,11 +390,16 @@ namespace InventoryKamera
 
 		#endregion One-click update (step 6)
 
+		// GitHub's link when it's this repo's own page, otherwise the repo's releases list.
+		internal static string ReleasePageUrl(string fromGitHub) =>
+			ForkRepository.IsOwnPage(fromGitHub) ? fromGitHub : ForkRepository.ReleasesUrl;
+
 		private void OpenRelease()
 		{
 			if (string.IsNullOrEmpty(Result?.ReleaseUrl)) return;
-			Logger.Info("Opening the release page for {0}", Result.LatestTag);
-			try { Process.Start(new ProcessStartInfo(Result.ReleaseUrl) { UseShellExecute = true }); }
+			string url = ReleasePageUrl(Result.ReleaseUrl);
+			Logger.Info("Opening the release page for {0}: {1}", Result.LatestTag, url);
+			try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
 			catch (Exception ex) { Logger.Warn(ex, "Couldn't open the release page"); }
 		}
 

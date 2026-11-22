@@ -14,6 +14,12 @@ namespace InventoryKamera
 		public static string ReleasesUrl => Url + "releases";
 		public static string IssuesUrl => Url + "issues";
 
+		// True only for a page of this repository on GitHub, so a link from GitHub's reply is never opened
+		// as something else (a local program, another site).
+		public static bool IsOwnPage(string url) =>
+			!string.IsNullOrEmpty(url) && url.StartsWith(Url, StringComparison.Ordinal) && !url.Contains("..") &&
+			Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps && uri.Host == "github.com";
+
 		// True when a release tag such as "v1.5.1" is newer than the running version. Only
 		// major.minor.patch are compared: the build's fourth number is a random wildcard, so 1.5.0.x
 		// must count as equal to a "v1.5.0" release. Tags that are not a version give false.

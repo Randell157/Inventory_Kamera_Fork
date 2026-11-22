@@ -502,6 +502,7 @@ namespace InventoryKamera
 			StartListening();
 			ShowScanSpeed();
 			ShowScan();   // catches up with anything that happened while hidden
+			OpenOptimizer.Enabled = ScanWindows.CanOpenOptimizer;
 		}
 
 		public void BecameHidden() => StopListening();

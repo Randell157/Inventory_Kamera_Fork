@@ -81,6 +81,7 @@ namespace InventoryKamera
             int choice = ScanSpeeds.ChoiceOf(ScanSpeeds.Valid(Properties.Settings.Default.ScanSpeed));
             if (ScanSpeed_ComboBox.Items.Count > choice && ScanSpeed_ComboBox.SelectedIndex != choice) ScanSpeed_ComboBox.SelectedIndex = choice;
             UserInterface.RefitStatus();
+            ManualExportButton.Enabled = ScanWindows.CanOpenOptimizer;   // a scan in another look may have ended
         }
 
         public void BecameHidden() { }

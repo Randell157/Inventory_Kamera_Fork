@@ -9,7 +9,7 @@ This scanner exports in `.GOOD`, a JSON-based exporting format, which allows you
 ## Download
 [LATEST DOWNLOAD HERE](https://github.com/Randell157/Inventory_Kamera_Fork/releases/latest) <- CLICK ME NOT THE "CODE" BUTTON NEAR THE TOP OF THIS PAGE
 
-**Tested with Genshin Impact 7.2** (Inventory Kamera 1.6.0, November 2026): full scans of weapons, artifacts, characters, materials and character development items at 1920×1080.
+**Tested with Genshin Impact 7.2** (Inventory Kamera 1.7.0, November 2026): a full scan of weapons, artifacts, characters and materials from the Simple look, and a filtered scan from Advanced, at 1920×1080.
 
 ## DISCORD
 The Discord server of the original Inventory Kamera project (not run by this fork): https://discord.gg/zh56aVWe3U
@@ -28,9 +28,7 @@ The Discord server of the original Inventory Kamera project (not run by this for
 - Scanner
   - [Updating the database](#updating-for-new-game-versions)
 - Repository
-  - [Reporting a bug or a scanning issue](#reporting-an-issue)
-  - [Requesting a new feature](#requesting-a-new-feature)
-  - [Asking a question](#asking-a-question)
+  - [Reporting a bug, a scanning issue or a question](#creating-a-new-issue)
   - [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
   - [AI-assisted development](#ai-assisted-development)
   - [Credits](#credits)
@@ -41,11 +39,12 @@ The Discord server of the original Inventory Kamera project (not run by this for
 Before installing Inventory Kamera, please have **the following things installed on your device**:
 
 - [GenshinImpact.exe](https://genshin.hoyoverse.com/) or [YuanShen.exe](https://ys.mihoyo.com/) launcher
+- Windows 10 or 11 (64-bit). The .NET Framework 4.7.2 it needs is already part of Windows 10 (version 1803 or later) and Windows 11.
 - [Microsoft Visual C++ Redistributable for Visual Studio 2015-2022 (x86 or x64)](https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-studio-2015-2017-2019-and-2022), _**A computer restart may be required after installing this package for the first time**_
 
 [Download the latest version of Inventory Kamera here](https://github.com/Randell157/Inventory_Kamera_Fork/releases/latest) and unzip its files into a folder of your choosing, then launch the extracted .exe file. It will likely prompt you for Security and/or User Access. This access is required to interact with the game.
 
-To upgrade from a previous version, download a newer release and unzip its files into the current Inventory Kamera location (allow it to replace old files when prompted) or a new folder of your choosing.
+To upgrade from a previous version, download a newer release and unzip its files into the current Inventory Kamera location (allow it to replace old files when prompted) or a new folder of your choosing. From 1.7 on, `Options` → `Updates…` → `Update…` does this for you (see [Updating automatically](#updating-automatically)).
 
 ## Setting up Genshin Impact
 
@@ -65,27 +64,39 @@ To upgrade from a previous version, download a newer release and unzip its files
 
 ## How to configure Inventory Kamera
 
+Inventory Kamera has three looks; switch between them from the `View` menu (your choice is remembered):
+
+| Simple | Advanced | Classic |
+| --- | --- | --- |
+| <img src="docs/images/look-simple.png" alt="The Simple look" width="220"> | <img src="docs/images/look-advanced.png" alt="The Advanced look" width="420"> | <img src="docs/images/look-classic.png" alt="The Classic look" width="300"> |
+
+- **Simple** (the default for new installs): what to scan, a short line under weapons, artifacts and characters saying which options will be used, and a big `Scan Genshin` button. Click `Change` on a line to open Advanced at that setting, or `Use standard settings` to go back to the app's defaults. While scanning it shows progress only.
+- **Advanced**: every scan option in a roomier window, with clearer "how many" controls (all or only some characters and artifact pages, star ratings for minimum rarity), plus the counts, item preview and error log.
+- **Classic**: the window from earlier versions.
+
+`View` → `Zoom` makes any look bigger (100% to 300%); sizes that don't fit your screen are greyed out.
+
 Before starting the scanner, you can (optionally) edit the following options:
 
 - Select which categories (weapons, artifacts, characters, items) you want to scan.
 - Configure minimum weapon and artifact rarity to be scanned.
 - "Delay per item" sets the scan speed. **Auto** (recommended) waits for each weapon and artifact card, and each character screen, to finish loading before reading it; it is usually both the fastest and the most reliable choice. The fixed speeds (Fastest 100 ms to Slowest 300 ms) also check the card; pick a slower one if menus or characters are misread. Hover over it to see every wait and the trade-offs. Prefer a slider? Choose Options → Scan Speed Control → Slider.
 - Constellations and talent levels are read straight from the lists on the character screen, at every speed; anything unclear is clicked and read the old way.
-- Set the file export destination in the File Directory.
-- Inventory Kamera uses the default keybinds to open the inventory (B) and character screens (C). These settings may be customized within Inventory Kamera's options.
+- Set the folder the exports are saved to (`Save exports to` in Simple and Advanced, `File Location` in Classic).
+- Inventory Kamera uses the default keybinds to open the inventory (B) and character screens (C). If you changed them in the game, set the same keys under `Options`.
 
 ## How to run Inventory Kamera
 
-1. Start the Inventory Kamera scan by **leaving the game with the Paimon Menu open** and clicking 'Scan'.
+1. Start the Inventory Kamera scan by **leaving the game with the Paimon Menu open** and clicking `Scan Genshin`.
 > **Warning**
 >
 > While scanning, **do not use your mouse or keyboard**. The scanner uses keyboard and mouse input to automate scanning.
 >
-> If you want to terminate the scan early, you can press `ENTER` button at any time. This will cancel the scan, and the application will not automatically output any scanned results. You may press the 'Export Scanned Data' button to force the export of the most recently collected data (whether it's complete or incomplete).
+> If you want to stop the scan early, press `ENTER` at any time. A stopped scan doesn't save an export file.
 
-2. Wait for Inventory Kamera to complete its scan for the `Scan Items` selections.
+2. Wait for Inventory Kamera to scan everything you ticked. When it's done, it tells you where the export was saved and how many items it found.
 
-3. Press the `Open Export Folder` button to open a File Explorer window. This is where Inventory Kamera exports its scanned data.
+3. Press `Open export folder` to open that folder in File Explorer. To load the export into [Genshin Optimizer](https://frzyc.github.io/genshin-optimizer/#/), press `Open Genshin Optimizer`: it copies the data to your clipboard and opens the site.
 
 
 
@@ -98,13 +109,13 @@ Inventory Kamera uses lists of valid items and characters to assist with text re
 
 Once a day, when the application starts, Inventory Kamera checks for a newer version of itself and of the Genshin game data. If it finds one, the status line says so and `Options` shows a blue dot; nothing pops up. Inventory Kamera syncs with [Dimbreath's Anime Game Data Repo](https://gitlab.com/Dimbreath/AnimeGameData) for new game versions. Big thanks for all the hard work done there.
 
-Open `Updates…` under `Options` to see what's new, read the release notes, and update the game data (or check right away with `Check now`). `Download again` forces the game data download when no new Genshin Impact version is detected. A normal update also refreshes characters already in your lists, so corrected game data reaches older installs too.
+Open `Updates…` under `Options` to see what's new, read the release notes, and update the game data (or check right away with `Check now`). For a new version of the app, `Update…` downloads the release zip from this repository's GitHub releases, checks it against GitHub's SHA-256 checksum (it refuses a download that doesn't match or has no checksum), replaces the program files and restarts. Your settings, lookup tables, logs and exports are not touched. `Skip this version` and `Remind me later` hide the notice. `Download again` forces the game data download when no new Genshin Impact version is detected. A normal update also refreshes characters already in your lists, so corrected game data reaches older installs too.
 
 ### Updating manually
 
 > **Warning**
 > 
-> This option should only be necessary if Inventory Kamera's game data update (`Options` → `Updates…`) reports an error or the generated ouputs are invalid.
+> This option should only be necessary if Inventory Kamera's game data update (`Options` → `Updates…`) reports an error or the generated outputs are invalid.
 
 The materials and weapons lists are kept in a simple key:value JSON-readable format. 'value' is the name of an item in [PascalCase](<https://en.wikipedia.org/wiki/Naming_convention_(programming)#Examples_of_multiple-word_identifier_formats>) and 'key' is whatever 'value' is but in lowercase. 
 
@@ -164,7 +175,7 @@ characters.json
   },
 ```
 Note: The ConstellationName value is formatted as an array. This primarily applies to only the traveler as the male and female versions of the characters have different constellation names.
-Note: The Traveler is a unique case in which constellation skill orders are be provided for each currently available element.
+Note: The Traveler is a unique case in which constellation skill orders are provided for each currently available element.
 
 The character's name is as it appears in the party menu on the right side of the in-world UI or the character's menu screen in the top left corner. The constellation order depends on which talent the third constellation upgrades for each character.
 
@@ -212,7 +223,7 @@ Consider using [a JSON text validator](https://jsonlint.com/) after following th
 
 ### Creating a new issue
 
-Open issues for this fork at [github.com/Randell157/Inventory_Kamera_Fork/issues](https://github.com/Randell157/Inventory_Kamera_Fork/issues). We would **love to have Screenshots (especially video recordings!) and Error Logs as evidence**. These can be very helpful for debugging your problem. Add it to the issue via drag-and-drop or by attaching the file to the template. Inventory Kamera may place screenshots in the `logging` folder (divided into categories) when it thinks it encountered an issue. Attaching a zipped copy of your `logging` folder is the best way to submit logs. You may check the 'Log All Screenshots' box to force this behavior in most areas that may concern the devs.
+Open issues for this fork at [github.com/Randell157/Inventory_Kamera_Fork/issues](https://github.com/Randell157/Inventory_Kamera_Fork/issues). We would **love to have Screenshots (especially video recordings!) and Error Logs as evidence**. These can be very helpful for debugging your problem. Add it to the issue via drag-and-drop or by attaching the file to the template. Inventory Kamera may place screenshots in the `logging` folder (divided into categories) when it thinks it encountered an issue. Attaching a zipped copy of your `logging` folder is the best way to submit logs. You may tick `Log all screenshots` (in Advanced and Classic) to save screenshots in most areas, which helps when reporting a problem.
 
 ## Frequently Asked Questions (FAQ)
 
@@ -227,7 +238,7 @@ However, that does not mean it will stay that way forever! We are at the mercy o
 
 #### What Languages does Inventory Kamera support?
 
-Inventory Kamera only supports _**English**_ currently. This limitation is due to only having a trained dataset available for the English language. The in-game "Game Langugae" option must be set to Engish. Scanning efficiency is not guaranteed for other languages. More languages may be implemented in the future but there are no current plans.
+Inventory Kamera only supports _**English**_ currently. This limitation is due to only having a trained dataset available for the English language. The in-game "Game Language" option must be set to English. Scanning efficiency is not guaranteed for other languages. More languages may be implemented in the future but there are no current plans.
 
 ## AI-assisted development
 

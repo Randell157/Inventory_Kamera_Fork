@@ -312,6 +312,45 @@ namespace InventoryKamera.Tests
 			}
 		}
 
+		// Live 2026-11-22: a scan in Advanced, then View → Simple: Simple's Optimizer button stayed grey.
+		[TestMethod]
+		public void OptimizerButtonCatchesUpWhenALookIsShownAgain()
+		{
+			var isolation = new MaterialQuantityTests();
+			isolation.IsolateSettingsDataAndLogs();
+			var data = typeof(ScanSession).GetProperty("Data", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+			try
+			{
+				AppStartup.PrepareSettings();
+				using (var simple = new SimpleForm())
+				using (var advanced = new AdvancedForm())
+				using (var classic = new MainForm())
+				{
+					Bind(simple); Bind(advanced); Bind(classic);
+					var classicButton = (Button)typeof(MainForm).GetField("ManualExportButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(classic);
+					Assert.IsFalse(simple.OpenOptimizer.Enabled || advanced.OpenOptimizer.Enabled || classicButton.Enabled, "no scan yet");
+
+					var scanned = new InventoryKamera();   // what a scan in another look left behind
+					scanned.Characters.Add(new Character());
+					data.SetValue(null, scanned);
+					simple.BecameShown(); advanced.BecameShown(); classic.BecameShown();
+					Assert.IsTrue(simple.OpenOptimizer.Enabled, "Simple");
+					Assert.IsTrue(advanced.OpenOptimizer.Enabled, "Advanced");
+					Assert.IsTrue(classicButton.Enabled, "Classic");
+
+					data.SetValue(null, new InventoryKamera());   // a scan with nothing found
+					simple.BecameShown(); advanced.BecameShown(); classic.BecameShown();
+					Assert.IsFalse(simple.OpenOptimizer.Enabled || advanced.OpenOptimizer.Enabled || classicButton.Enabled, "nothing to copy");
+				}
+			}
+			finally
+			{
+				data.SetValue(null, new InventoryKamera());
+				isolation.RestoreGlobalsAndRemoveOwnSandbox();
+				UserInterface.Init(null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+			}
+		}
+
 		[TestMethod]
 		public void WindowsKeepTheirTopLeftCornerOnScreen()
 		{

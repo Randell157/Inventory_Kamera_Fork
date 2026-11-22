@@ -60,6 +60,10 @@ namespace InventoryKamera
 				Process.Start("explorer.exe");
 		}
 
+		// The Optimizer button is on when the last scan has data and none is running. A window checks this when
+		// it's shown again, since a scan in another look ended while it was hidden.
+		internal static bool CanOpenOptimizer => !ScanSession.IsRunning && ScanSession.Data?.HasData == true;
+
 		// Copies the scan to the clipboard and opens Genshin Optimizer. Only used by the button.
 		internal static void OpenOptimizer(GOOD data)
 		{
