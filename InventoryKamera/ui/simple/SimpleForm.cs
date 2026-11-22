@@ -117,13 +117,7 @@ namespace InventoryKamera
 
 			ResumeLayout(true);
 
-			// This look shows no item images, text output, counters or error box: the status, counts and
-			// errors come from UserInterface's events instead.
-			UserInterface.Init(null, null, null, null, null, null, null, null, null, null, null, null, null, null);
-			UserInterface.CountsChanged += OnScanChanged;
-			UserInterface.StatusChanged += OnScanChanged;
-			UserInterface.ErrorsChanged += OnScanChanged;
-			listening = true;
+			// It listens for the scan only while it's on screen (BecameShown / BecameHidden).
 			FormClosed += (s, e) => StopListening();
 			FormClosing += (s, e) => { Properties.Settings.Default.Save(); ScanSession.RemoveHotkey(); };
 
@@ -150,6 +144,18 @@ namespace InventoryKamera
 			var box = new GroupBox { Text = text, Bounds = new Rectangle(Edge, top, Inner, height) };
 			Controls.Add(box);
 			return box;
+		}
+
+		// This look shows no item images, text output, counters or error box: the status, counts and
+		// errors come from UserInterface's events instead.
+		private void StartListening()
+		{
+			UserInterface.Init(null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+			if (listening) return;
+			listening = true;
+			UserInterface.CountsChanged += OnScanChanged;
+			UserInterface.StatusChanged += OnScanChanged;
+			UserInterface.ErrorsChanged += OnScanChanged;
 		}
 
 		internal void StopListening()
@@ -238,6 +244,14 @@ namespace InventoryKamera
 
 		// ILookWindow
 		public void LookupTablesReloaded() => CheckTravelerName();
+
+		public void BecameShown()
+		{
+			StartListening();
+			ShowScan();   // catches up with anything that happened while hidden
+		}
+
+		public void BecameHidden() => StopListening();
 
 		// IScanWindow
 		public Control Invoker => this;

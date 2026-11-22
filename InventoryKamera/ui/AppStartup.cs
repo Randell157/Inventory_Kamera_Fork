@@ -13,6 +13,11 @@ namespace InventoryKamera
 		// The lookup tables were just downloaded or updated and reloaded: re-check anything that uses them
 		// (the custom-name boxes).
 		void LookupTablesReloaded();
+
+		// Each look keeps its window for the whole launch (LookContext hides the one you switch away from).
+		// Shown: this window now shows the status, counts and errors (also after a zoom). Hidden: it stops.
+		void BecameShown();
+		void BecameHidden();
 	}
 
 	// What runs once per launch, whatever look is open: settings repairs before the first window is built,

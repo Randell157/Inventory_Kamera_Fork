@@ -43,6 +43,16 @@ namespace InventoryKamera
 
             Text = $"Inventory Kamera V{LookContext.VersionText}";   // the version is logged by LookContext
 
+            PointUserInterfaceHere();
+
+            AddZeroMeansAllHints();
+            // View -> Simple / Advanced / Classic and Zoom, between File and Options.
+            menuStrip1.Items.Insert(menuStrip1.Items.IndexOf(fileToolStripMenuItem) + 1, LookMenu.Build(Look.Classic, this));
+        }
+
+        // The status, counters, images and error log of a scan show in this window's controls.
+        private void PointUserInterfaceHere()
+        {
             UserInterface.Init(
                 GearPictureBox,
                 ArtifactOutput_TextBox,
@@ -58,11 +68,17 @@ namespace InventoryKamera
                 ProgramStatus_Label,
                 ErrorLog_TextBox,
                 Navigation_Image);
-
-            AddZeroMeansAllHints();
-            // View -> Simple / Advanced / Classic and Zoom, between File and Options.
-            menuStrip1.Items.Insert(menuStrip1.Items.IndexOf(fileToolStripMenuItem) + 1, LookMenu.Build(Look.Classic, this));
         }
+
+        // ILookWindow: this window is on screen again (or was zoomed). Its controls show the scan from now on;
+        // the status line is redrawn at its new size.
+        public void BecameShown()
+        {
+            PointUserInterfaceHere();
+            UserInterface.RefitStatus();
+        }
+
+        public void BecameHidden() { }
 
         // ILookWindow: the lookup tables were reloaded; re-check the custom-name boxes against them.
         public void LookupTablesReloaded()

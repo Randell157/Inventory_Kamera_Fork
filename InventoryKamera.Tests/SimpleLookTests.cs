@@ -144,6 +144,8 @@ namespace InventoryKamera.Tests
 				using (var form = new SimpleForm())
 				{
 					Bind(form);
+					Assert.AreEqual(listenersBefore, UserInterface.Listeners, "not listening until it's on screen");
+					form.BecameShown();
 					Assert.IsTrue(form.Weapons.Checked);
 					Assert.IsFalse(form.Materials.Checked);
 					Assert.AreEqual("Aether", form.TravelerName.Text);
@@ -163,6 +165,15 @@ namespace InventoryKamera.Tests
 					Assert.AreEqual("1 error · View log", form.Errors.Text);
 					UserInterface.ResetErrors();
 					Assert.AreEqual("", form.Errors.Text);
+					form.BecameHidden();
+					Assert.AreEqual(listenersBefore, UserInterface.Listeners, "a hidden window stops listening");
+					UserInterface.SetProgramStatus("Scanning");
+					Assert.AreEqual("Ready", form.Status.Text, "not updated while hidden");
+					form.BecameShown();
+					form.BecameShown();   // twice (a zoom) doesn't listen twice
+					Assert.AreEqual(listenersBefore + 3, UserInterface.Listeners);
+					Assert.AreEqual("Scanning", form.Status.Text, "catches up when shown again");
+					UserInterface.SetProgramStatus("");
 					form.Close();
 				}
 				Assert.AreEqual(listenersBefore, UserInterface.Listeners, "a closed window stops listening");
@@ -195,6 +206,141 @@ namespace InventoryKamera.Tests
 				}
 			}
 			finally { isolation.RestoreGlobalsAndRemoveOwnSandbox(); }
+		}
+
+		// Every control's position, size and font, to compare a window before and after zooming.
+		private static List<string> Layout(Control root)
+		{
+			var all = new List<string> { $"{root.Name} {root.ClientSize} {root.Font.Size}" };
+			void Walk(Control parent)
+			{
+				foreach (Control c in parent.Controls)
+				{
+					all.Add($"{c.GetType().Name} {c.Text} {c.Bounds} {c.Font.Name} {c.Font.Size} {c.Font.Style}");
+					Walk(c);
+				}
+			}
+			Walk(root);
+			return all;
+		}
+
+		private static Form TestForm()
+		{
+			var form = new Form { ClientSize = new Size(333, 217), Font = new Font("Segoe UI", 9F) };
+			var group = new GroupBox { Text = "g", Bounds = new Rectangle(7, 31, 151, 97) };
+			group.Controls.Add(new CheckBox { Text = "c", AutoSize = true, Location = new Point(11, 23) });
+			group.Controls.Add(new TextBox { Bounds = new Rectangle(13, 53, 117, 23) });
+			form.Controls.AddRange(new Control[] { group, new Label { Text = "b", Bounds = new Rectangle(171, 41, 97, 19), Font = new Font("Segoe UI", 11F, FontStyle.Bold) }, new Button { Text = "x", Bounds = new Rectangle(9, 151, 311, 37) }, new MenuStrip() });
+			return form;
+		}
+
+		[TestMethod]
+		public void ZoomingInPlaceAndBackNeverDrifts()
+		{
+			using (var form = TestForm())
+			{
+				var original = Layout(form);
+				foreach (int step in new[] { 200, 125, 175, 300, 150 })
+				{
+					Zoom.Set(form, step);
+					Assert.AreEqual(step, Zoom.Current(form));
+				}
+				Zoom.Set(form, 175);
+				int buttonWidth = form.Controls.OfType<Button>().Single().Width;
+				Assert.AreEqual(311 * 1.75, buttonWidth, 1.5, "175 % is 175 % of the original, however it got there");
+				Zoom.Set(form, 100);
+				CollectionAssert.AreEqual(original, Layout(form), "back at 100 %: exactly as built");
+			}
+
+			// A window opened at a saved zoom (scaled once before it's shown) comes back to that exact layout too.
+			using (var form = TestForm())
+			{
+				Zoom.Apply(form, 150);
+				var opened = Layout(form);
+				Zoom.Set(form, 100);
+				Zoom.Set(form, 250);
+				Zoom.Set(form, 150);
+				CollectionAssert.AreEqual(opened, Layout(form));
+			}
+		}
+
+		[TestMethod]
+		public void SimpleZoomsInPlaceAndBackExactly()
+		{
+			var isolation = new MaterialQuantityTests();
+			isolation.IsolateSettingsDataAndLogs();
+			try
+			{
+				AppStartup.PrepareSettings();
+				using (var form = new SimpleForm())
+				{
+					Bind(form);
+					var original = Layout(form);
+					foreach (int step in new[] { 200, 125, 175, 100 }) Zoom.Set(form, step);
+					CollectionAssert.AreEqual(original, Layout(form), "menus, margins and fonts all back as built");
+				}
+			}
+			finally { isolation.RestoreGlobalsAndRemoveOwnSandbox(); }
+		}
+
+		[TestMethod]
+		public void ClassicZoomsInPlaceAndBackExactly()
+		{
+			var isolation = new MaterialQuantityTests();
+			isolation.IsolateSettingsDataAndLogs();
+			try
+			{
+				AppStartup.PrepareSettings();
+				using (var form = new MainForm())
+				{
+					Bind(form);
+					var original = Layout(form);
+					foreach (int step in new[] { 150, 200, 125, 100 }) Zoom.Set(form, step);
+					CollectionAssert.AreEqual(original, Layout(form));
+				}
+			}
+			finally
+			{
+				isolation.RestoreGlobalsAndRemoveOwnSandbox();
+				UserInterface.Init(null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+			}
+		}
+
+		[TestMethod]
+		public void WindowsKeepTheirTopLeftCornerOnScreen()
+		{
+			var size = new Size(630, 960);
+			Assert.AreEqual(new Point(100, 50), Placement.KeepTopLeft(new Point(100, 50), size, FullHd), "fits: stays put");
+			Assert.AreEqual(new Point(1290, 50), Placement.KeepTopLeft(new Point(1500, 50), size, FullHd), "would run off the right: moved left just enough");
+			Assert.AreEqual(new Point(100, 72), Placement.KeepTopLeft(new Point(100, 400), size, FullHd), "would run off the bottom: moved up just enough");
+			Assert.AreEqual(new Point(0, 0), Placement.KeepTopLeft(new Point(-30, -10), size, FullHd), "never above or left of the screen");
+			Assert.AreEqual(new Point(0, 0), Placement.KeepTopLeft(new Point(500, 500), new Size(2500, 1200), FullHd), "too big anyway: the top-left stays visible");
+			var second = new Rectangle(1920, 0, 1920, 1032);
+			Assert.AreEqual(new Point(2000, 50), Placement.KeepTopLeft(new Point(2000, 50), size, second), "a second screen");
+			Assert.AreEqual(new Point(645, 36), Placement.Centered(size, FullHd));
+		}
+
+		[TestMethod]
+		public void EachLooksWindowIsBuiltOnceAndKept()
+		{
+			int builds = 0;
+			var set = new WindowSet(look => { builds++; return new Form { Text = look.ToString() }; });
+			var simple = set.Get(Look.Simple, out bool built);
+			Assert.IsTrue(built);
+			var classic = set.Get(Look.Classic, out built);
+			Assert.IsTrue(built);
+			Assert.AreSame(simple, set.Get(Look.Simple, out built), "switching back: the same window");
+			Assert.IsFalse(built);
+			Assert.AreEqual(2, builds);
+			Assert.AreEqual(2, set.All.Count());
+
+			classic.Dispose();
+			Assert.AreNotSame(classic, set.Get(Look.Classic, out built), "a closed window is built again");
+			Assert.IsTrue(built);
+			set.Forget(simple);
+			Assert.AreEqual(1, set.All.Count());
+			foreach (var form in set.All.ToList()) form.Dispose();
+			simple.Dispose();
 		}
 	}
 }

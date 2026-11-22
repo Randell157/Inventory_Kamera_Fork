@@ -312,19 +312,33 @@ namespace InventoryKamera
 			StatusColor = color;
 			StatusChanged?.Invoke();
 			if (programStatus_Label == null) return;
+			var label = programStatus_Label;
+			label.Invoke((MethodInvoker)delegate { ShowStatus(label); });
+		}
 
-			MethodInvoker statusAction = delegate
+		// Draws Status on the status label: its size from FitStatus and the zoom, two lines a little higher.
+		private static void ShowStatus(Label label)
+		{
+			if (statusTop < 0) statusTop = label.Top;
+			var (size, text) = FitStatus(Status, label.Font.FontFamily);
+			label.Text = text;
+			label.ForeColor = StatusColor;
+			label.Font = new Font(label.Font.FontFamily, size * StatusZoom);
+			label.Top = text != null && text.Contains("\n") ? statusTop - (int)Math.Round(3 * StatusZoom) : statusTop;   // two lines end above the Scan button
+			label.Refresh();
+		}
+
+		// The window with the status label was just shown again or zoomed: its label may have moved and its
+		// text may be older than Status. Works out the one-line position again and redraws.
+		internal static void RefitStatus()
+		{
+			var label = programStatus_Label;
+			if (label == null || !label.IsHandleCreated) return;
+			label.Invoke((MethodInvoker)delegate
 			{
-				if (statusTop < 0) statusTop = programStatus_Label.Top;
-				var (size, text) = FitStatus(status, programStatus_Label.Font.FontFamily);
-				programStatus_Label.Text = text;
-				programStatus_Label.ForeColor = color;
-				programStatus_Label.Font = new Font(programStatus_Label.Font.FontFamily, size * StatusZoom);
-				programStatus_Label.Top = text != null && text.Contains("\n") ? statusTop - (int)Math.Round(3 * StatusZoom) : statusTop;   // two lines end above the Scan button
-				programStatus_Label.Refresh();
-			};
-
-			programStatus_Label.Invoke(statusAction);
+				statusTop = label.Top + (label.Text.Contains("\n") ? (int)Math.Round(3 * StatusZoom) : 0);
+				ShowStatus(label);
+			});
 		}
 
 		private static int errorCount;
