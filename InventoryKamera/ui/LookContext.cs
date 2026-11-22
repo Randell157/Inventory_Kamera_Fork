@@ -23,6 +23,9 @@ namespace InventoryKamera
 
 		internal Look Shown { get; private set; }
 
+		// The window on screen.
+		internal Form Window => window;
+
 		// The zoom of the open window (the saved one, or less when it doesn't fit the screen).
 		internal int ShownZoom => window == null ? Zoom.Normal : Zoom.Current(window);
 

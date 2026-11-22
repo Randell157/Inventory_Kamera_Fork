@@ -24,6 +24,7 @@ namespace InventoryKamera
 		internal readonly Label Status = new Label(), Counts = new Label();
 		internal readonly ProgressBar Progress = new ProgressBar();
 		internal readonly LinkLabel Errors = new LinkLabel();
+		internal readonly LinkLabel WeaponsLine = new LinkLabel(), ArtifactsLine = new LinkLabel(), CharactersLine = new LinkLabel(), UseStandard = new LinkLabel();
 		private readonly ToolTip tips = new ToolTip();
 		private bool listening;
 
@@ -35,30 +36,15 @@ namespace InventoryKamera
 			Font = new Font("Segoe UI", 9F);
 			FormBorderStyle = FormBorderStyle.FixedSingle;
 			MaximizeBox = false;
-			ClientSize = new Size(344, 512);
+			ClientSize = new Size(344, 556);
 			Text = $"Inventory Kamera V{LookContext.VersionText}";
 			Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
 			BuildMenu();
 
-			var what = Group("What to scan", 32, 152);
-			int y = 22;
-			foreach (var (box, text, setting) in new[] {
-				(Weapons, "Weapons", "ScanWeapons"),
-				(Artifacts, "Artifacts", "ScanArtifacts"),
-				(Characters, "Characters", "ScanCharacters"),
-				(DevItems, "Character development items", "ScanCharDevItems"),
-				(Materials, "Materials", "ScanMaterials") })
-			{
-				box.Text = text;
-				box.AutoSize = true;
-				box.Location = new Point(12, y);
-				box.DataBindings.Add(new Binding("Checked", Properties.Settings.Default, setting, true, DataSourceUpdateMode.OnPropertyChanged));
-				what.Controls.Add(box);
-				y += 25;
-			}
+			BuildWhatToScan();
 
-			var game = Group("Your game", 192, 104);
+			var game = Group("Your game", 236, 104);
 			game.Controls.Add(new Label { Text = "Traveler's name", AutoSize = true, Location = new Point(10, 25) });
 			TravelerName.SetBounds(112, 22, 196, 23);
 			TravelerName.DataBindings.Add(new Binding("Text", Properties.Settings.Default, "TravelerName", true, DataSourceUpdateMode.OnPropertyChanged));
@@ -76,7 +62,7 @@ namespace InventoryKamera
 
 			scan.Text = "Scan Genshin";
 			scan.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
-			scan.SetBounds(Edge, 306, Inner, 40);
+			scan.SetBounds(Edge, 350, Inner, 40);
 			scan.FlatStyle = FlatStyle.Flat;   // a plain button can't be colored; flat can (mockup: Windows accent blue)
 			scan.FlatAppearance.BorderSize = 0;
 			scan.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 117, 197);
@@ -85,31 +71,31 @@ namespace InventoryKamera
 			StyleScanButton();
 			scan.Click += Scan_Click;
 			Controls.Add(scan);
-			Controls.Add(new Label { Text = "Press Enter in the game to stop a scan", ForeColor = SystemColors.GrayText, TextAlign = ContentAlignment.MiddleCenter, Bounds = new Rectangle(Edge, 348, Inner, 18) });
+			Controls.Add(new Label { Text = "Press Enter in the game to stop a scan", ForeColor = SystemColors.GrayText, TextAlign = ContentAlignment.MiddleCenter, Bounds = new Rectangle(Edge, 392, Inner, 18) });
 
-			Status.SetBounds(Edge, 372, Inner, 20);
+			Status.SetBounds(Edge, 416, Inner, 20);
 			Status.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
 			Controls.Add(Status);
-			Progress.SetBounds(Edge, 394, Inner, 14);
+			Progress.SetBounds(Edge, 438, Inner, 14);
 			Progress.Visible = false;
 			Controls.Add(Progress);
-			Counts.SetBounds(Edge, 410, Inner, 18);
+			Counts.SetBounds(Edge, 454, Inner, 18);
 			Counts.ForeColor = SystemColors.GrayText;
 			Counts.Visible = false;
 			Controls.Add(Counts);
-			Errors.SetBounds(Edge, 430, Inner, 18);
+			Errors.SetBounds(Edge, 474, Inner, 18);
 			Errors.LinkColor = Errors.ActiveLinkColor = Errors.VisitedLinkColor = UserInterface.ErrorColor;
 			Errors.Visible = false;
 			Errors.LinkClicked += (s, e) => OpenLog();
 			Controls.Add(Errors);
 
-			Controls.Add(new Label { Text = Looks.MoreOptionsText, ForeColor = SystemColors.GrayText, Bounds = new Rectangle(Edge, 452, Inner, 18) });
+			Controls.Add(new Label { Text = Looks.MoreOptionsText, ForeColor = SystemColors.GrayText, Bounds = new Rectangle(Edge, 496, Inner, 18) });
 			openFolder.Text = "Open export folder";
-			openFolder.SetBounds(Edge, 474, 155, 28);
+			openFolder.SetBounds(Edge, 518, 155, 28);
 			openFolder.Click += (s, e) => ScanWindows.OpenFolder(OutputPath.Text);
 			Controls.Add(openFolder);
 			OpenOptimizer.Text = "Open Genshin Optimizer";
-			OpenOptimizer.SetBounds(Edge + Inner - 160, 474, 160, 28);
+			OpenOptimizer.SetBounds(Edge + Inner - 160, 518, 160, 28);
 			OpenOptimizer.Enabled = ScanSession.Data?.HasData == true;
 			tips.SetToolTip(OpenOptimizer, "Copies the last scan and opens Genshin Optimizer. Available after a scan.");
 			OpenOptimizer.Click += (s, e) => ScanWindows.OpenOptimizer(new GOOD(ScanSession.Data));
@@ -137,6 +123,88 @@ namespace InventoryKamera
 			menu.Items.AddRange(new ToolStripItem[] { file, LookMenu.Build(Look.Simple, this), options });
 			MainMenuStrip = menu;
 			Controls.Add(menu);
+		}
+
+		// What to scan: the five checkboxes, a grey line under Weapons, Artifacts and Characters saying what
+		// the hidden options will do ("4★ and up, any level · Change"), and "Use standard settings" when
+		// something differs from the app's defaults (1.7, mockup 1A / 2A / 3A). The lines sit in a top-down
+		// flow, so an unticked item's line takes no room.
+		private void BuildWhatToScan()
+		{
+			var what = Group("What to scan", 32, 196);
+			var flow = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, Bounds = new Rectangle(4, 18, 312, 156) };
+			what.Controls.Add(flow);
+			var lineFont = new Font("Segoe UI", 8.25F);
+			foreach (var (box, text, setting, line, section) in new[] {
+				(Weapons, "Weapons", "ScanWeapons", WeaponsLine, AdvancedForm.Section.Weapons),
+				(Artifacts, "Artifacts", "ScanArtifacts", ArtifactsLine, AdvancedForm.Section.Artifacts),
+				(Characters, "Characters", "ScanCharacters", CharactersLine, AdvancedForm.Section.Characters),
+				(DevItems, "Character development items", "ScanCharDevItems", null, AdvancedForm.Section.Weapons),
+				(Materials, "Materials", "ScanMaterials", null, AdvancedForm.Section.Weapons) })
+			{
+				box.Text = text;
+				box.AutoSize = false;   // fixed rows: five checkboxes and three lines fit the box exactly
+				box.Size = new Size(296, 20);
+				box.Margin = new Padding(8, 1, 3, 0);
+				box.DataBindings.Add(new Binding("Checked", Properties.Settings.Default, setting, true, DataSourceUpdateMode.OnPropertyChanged));
+				flow.Controls.Add(box);
+				if (line == null) continue;
+				line.AutoSize = false;
+				line.Size = new Size(280, 15);
+				line.Font = lineFont;
+				line.Margin = new Padding(26, 0, 3, 1);
+				line.ForeColor = line.DisabledLinkColor = SystemColors.GrayText;
+				line.LinkColor = line.ActiveLinkColor = line.VisitedLinkColor = Color.FromArgb(0, 103, 192);
+				line.LinkClicked += (s, e) => OpenAdvancedAt(section);
+				flow.Controls.Add(line);
+			}
+
+			UseStandard.Text = "Use standard settings";
+			UseStandard.Font = lineFont;
+			UseStandard.TextAlign = ContentAlignment.TopRight;
+			UseStandard.Bounds = new Rectangle(10, 175, 300, 16);
+			UseStandard.LinkColor = UseStandard.ActiveLinkColor = UseStandard.VisitedLinkColor = Color.FromArgb(0, 103, 192);
+			tips.SetToolTip(UseStandard, StandardSettings.Tip);
+			UseStandard.LinkClicked += (s, e) => StandardSettings.Apply(Properties.Settings.Default);
+			what.Controls.Add(UseStandard);
+
+			Properties.Settings.Default.PropertyChanged += SettingChanged;
+			ShowSummaries();
+		}
+
+		// "Change": Advanced, with that box lit for a moment and the focus in it.
+		private static void OpenAdvancedAt(AdvancedForm.Section section)
+		{
+			var context = LookContext.Current;
+			if (context == null) return;
+			context.SwitchTo(Look.Advanced);
+			(context.Window as AdvancedForm)?.Highlight(section);
+		}
+
+		private void SettingChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+		{
+			if (IsDisposed) return;
+			if (InvokeRequired) BeginInvoke((MethodInvoker)ShowSummaries);
+			else ShowSummaries();
+		}
+
+		// The lines and the reset link, from the settings as they are now (changed in any look).
+		internal void ShowSummaries()
+		{
+			var settings = Properties.Settings.Default;
+			bool idle = !ScanSession.IsRunning;
+			void Line(LinkLabel line, bool on, string text)
+			{
+				line.Visible = on;
+				line.Text = text + " · Change";
+				line.LinkArea = new LinkArea(text.Length + 3, "Change".Length);
+				line.Enabled = idle;
+			}
+			Line(WeaponsLine, settings.ScanWeapons, SimpleText.WeaponsSummary((int)settings.MinimumWeaponRarity, (int)settings.MinimumWeaponLevel));
+			Line(ArtifactsLine, settings.ScanArtifacts, SimpleText.ArtifactsSummary((int)settings.MinimumArtifactRarity, (int)settings.MinimumArtifactLevel, (int)settings.SortByObtained));
+			Line(CharactersLine, settings.ScanCharacters, SimpleText.CharactersSummary((int)settings.NumOfCharToScan));
+			UseStandard.Visible = !StandardSettings.IsStandard(settings);
+			UseStandard.Enabled = idle;
 		}
 
 		private GroupBox Group(string text, int top, int height)
@@ -223,6 +291,7 @@ namespace InventoryKamera
 			scan.Text = "Scanning…";
 			OpenOptimizer.Enabled = false;
 			ShowScan();
+			ShowSummaries();   // Change and "Use standard settings" wait until the scan ends
 		}
 
 		private void OpenLog()
@@ -267,13 +336,19 @@ namespace InventoryKamera
 				scan.Text = "Scan Genshin";
 				OpenOptimizer.Enabled = hasData;
 				ShowScan();
+				ShowSummaries();
 				Activate();
 			});
 		}
 
 		protected override void Dispose(bool disposing)
 		{
-			if (disposing) { StopListening(); tips.Dispose(); }
+			if (disposing)
+			{
+				StopListening();
+				Properties.Settings.Default.PropertyChanged -= SettingChanged;
+				tips.Dispose();
+			}
 			base.Dispose(disposing);
 		}
 	}

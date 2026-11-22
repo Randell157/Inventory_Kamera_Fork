@@ -26,6 +26,17 @@ namespace InventoryKamera
 			return (int)(100 * done / total);
 		}
 
+		// The grey lines under Simple's checkboxes: what the options it doesn't show will do.
+		internal static string WeaponsSummary(int rarity, int level) =>
+			$"{rarity}★ and up, " + (level <= 1 ? "any level" : $"level {level} and up");
+
+		internal static string ArtifactsSummary(int rarity, int level, int pages) =>
+			$"{rarity}★ and up, " + (level <= 0 ? "any level" : $"+{level} and up") + ", " +
+			(pages <= 0 ? "every page" : pages == 1 ? "newest page" : $"newest {pages} pages");
+
+		internal static string CharactersSummary(int count) =>
+			count <= 0 ? "every character" : count == 1 ? "first character" : $"first {count} characters";
+
 		// "1 error · View log", "3 errors · View log"; nothing when all went well.
 		internal static string ErrorLink(int errors) =>
 			errors <= 0 ? "" : $"{errors:N0} error{(errors == 1 ? "" : "s")} · View log";

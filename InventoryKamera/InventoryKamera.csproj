@@ -111,6 +111,7 @@
     <Compile Include="ui\simple\SimpleText.cs" />
     <Compile Include="ui\simple\SimpleForm.cs" />
     <Compile Include="ui\GameKeys.cs" />
+    <Compile Include="ui\StandardSettings.cs" />
     <Compile Include="ui\advanced\AdvancedText.cs" />
     <Compile Include="ui\advanced\HowManyControl.cs" />
     <Compile Include="ui\advanced\AdvancedForm.cs" />

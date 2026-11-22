@@ -202,7 +202,7 @@ namespace InventoryKamera.Tests
 				using (var form = new SimpleForm())
 				{
 					var normal = form.Size;
-					Assert.IsTrue(normal.Width <= 370 && normal.Height <= 560, $"about 360 × 550 at 100 %: {normal}");
+					Assert.IsTrue(normal.Width <= 370 && normal.Height <= 600, $"about 360 × 595 at 100 % (with the summary lines): {normal}");
 					Assert.AreEqual(175, Zoom.Usable(300, Zoom.Measure(form), FullHd));
 
 					int scanWidth = form.Controls.OfType<Button>().Max(b => b.Width);

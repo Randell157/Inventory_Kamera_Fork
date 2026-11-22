@@ -95,9 +95,12 @@ namespace InventoryKamera
 			Controls.Add(menu);
 		}
 
+		private GroupBox weaponsGroup, artifactsGroup, charactersGroup;
+
 		private GroupBox Group(string text, Rectangle bounds)
 		{
 			var box = new GroupBox { Text = text, Bounds = bounds };
+			box.Paint += PaintHighlightOutline;
 			Controls.Add(box);
 			return box;
 		}
@@ -188,7 +191,7 @@ namespace InventoryKamera
 
 		private void BuildWeaponsGroup()
 		{
-			var group = Group("Weapons", new Rectangle(Left_, 180, Half, 116));
+			var group = weaponsGroup = Group("Weapons", new Rectangle(Left_, 180, Half, 116));
 			RarityAndLevel(group, WeaponRarity, "MinimumWeaponRarity", "weapon", WeaponLevel, WeaponLevelNote, "MinimumWeaponLevel", 1, 90, AdvancedText.WeaponLevel);
 			EquipWeapons.Text = "Equip weapons to their owners";
 			EquipWeapons.AutoSize = true;
@@ -199,7 +202,7 @@ namespace InventoryKamera
 
 		private void BuildArtifactsGroup()
 		{
-			var group = Group("Artifacts", new Rectangle(Left_ + Half + 10, 180, Half, 204));
+			var group = artifactsGroup = Group("Artifacts", new Rectangle(Left_ + Half + 10, 180, Half, 204));
 			RarityAndLevel(group, ArtifactRarity, "MinimumArtifactRarity", "artifact", ArtifactLevel, ArtifactLevelNote, "MinimumArtifactLevel", 0, 20, AdvancedText.ArtifactLevel);
 			Caption(group, "Pages to scan", 10, 90);
 			ArtifactPages.Location = new Point(10, 110);
@@ -216,7 +219,7 @@ namespace InventoryKamera
 
 		private void BuildCharactersGroup()
 		{
-			var group = Group("Characters", new Rectangle(Left_, 302, Half, 82));
+			var group = charactersGroup = Group("Characters", new Rectangle(Left_, 302, Half, 82));
 			CharacterCount.Location = new Point(10, 22);
 			CharacterCount.AccessibleName = "Characters to scan";
 			Bind(CharacterCount, "Value", "NumOfCharToScan");
@@ -326,6 +329,68 @@ namespace InventoryKamera
 		}
 
 		#endregion Building the window
+
+		#region Highlight (Simple's "Change" links)
+
+		// Which box Simple's "Change" link was under.
+		internal enum Section { Weapons, Artifacts, Characters }
+
+		// Mockup pick C: pale Windows selection blue inside and a 2 px accent-blue outline, for 1.5 s, then
+		// straight off (no fade, so it's the same with reduce motion on).
+		internal static readonly Color HighlightFill = Color.FromArgb(229, 240, 251), HighlightOutline = Color.FromArgb(0, 103, 192);
+		internal const int HighlightMs = 1500;
+
+		private readonly Timer highlightTimer = new Timer { Interval = HighlightMs };
+
+		internal GroupBox Highlighted { get; private set; }
+
+		internal GroupBox GroupFor(Section section) =>
+			section == Section.Weapons ? weaponsGroup : section == Section.Artifacts ? artifactsGroup : charactersGroup;
+
+		// Lights up that box and puts the keyboard focus on its first option, which stays there.
+		internal void Highlight(Section section)
+		{
+			EndHighlight();
+			Highlighted = GroupFor(section);
+			Highlighted.BackColor = HighlightFill;
+			Highlighted.Invalidate();
+			ActiveControl = section == Section.Weapons ? WeaponRarity
+				: section == Section.Artifacts ? (Control)ArtifactRarity
+				: CharacterCount.OnlyChoice.Checked ? CharacterCount.OnlyChoice : CharacterCount.AllChoice;
+			highlightTimer.Tick -= HighlightTimerTick;
+			highlightTimer.Tick += HighlightTimerTick;
+			highlightTimer.Start();
+		}
+
+		private void HighlightTimerTick(object sender, EventArgs e) => EndHighlight();
+
+		internal void EndHighlight()
+		{
+			highlightTimer.Stop();
+			if (Highlighted == null) return;
+			Highlighted.BackColor = Color.Empty;   // back to the window's own colour
+			Highlighted.Invalidate();
+			Highlighted = null;
+		}
+
+		private void PaintHighlightOutline(object sender, PaintEventArgs e)
+		{
+			if (sender != Highlighted) return;
+			var box = (GroupBox)sender;
+			int top = box.Font.Height / 2, right = box.Width - 2, bottom = box.Height - 2;
+			// A gap behind the title, as in the box's own border.
+			int titleStart = 6, titleEnd = titleStart + TextRenderer.MeasureText(box.Text, box.Font).Width + 2;
+			using (var pen = new Pen(HighlightOutline, 2))
+			{
+				e.Graphics.DrawLine(pen, 1, top, titleStart, top);
+				e.Graphics.DrawLine(pen, titleEnd, top, right, top);
+				e.Graphics.DrawLine(pen, 1, top, 1, bottom);
+				e.Graphics.DrawLine(pen, right, top, right, bottom);
+				e.Graphics.DrawLine(pen, 1, bottom, right, bottom);
+			}
+		}
+
+		#endregion Highlight (Simple's "Change" links)
 
 		// White on blue (5.6:1); greyed while a scan runs.
 		private void StyleScanButton()
@@ -451,6 +516,7 @@ namespace InventoryKamera
 			{
 				StopListening();
 				Settings.PropertyChanged -= SettingChanged;
+				highlightTimer.Dispose();
 				tips.Dispose();
 			}
 			base.Dispose(disposing);

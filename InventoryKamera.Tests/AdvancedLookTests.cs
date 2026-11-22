@@ -202,6 +202,39 @@ namespace InventoryKamera.Tests
 		}
 
 		[TestMethod]
+		public void ChangeLightsUpItsBoxAndFocusesIt()
+		{
+			WithAdvanced((form, s) =>
+			{
+				var timer = (Timer)typeof(AdvancedForm).GetField("highlightTimer", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(form);
+				Assert.AreEqual(1500, timer.Interval, "about a second and a half");
+				var normal = form.GroupFor(AdvancedForm.Section.Weapons).BackColor;
+
+				form.Highlight(AdvancedForm.Section.Weapons);
+				Assert.AreSame(form.GroupFor(AdvancedForm.Section.Weapons), form.Highlighted);
+				Assert.AreEqual(AdvancedForm.HighlightFill, form.Highlighted.BackColor);
+				Assert.AreEqual(normal, form.GroupFor(AdvancedForm.Section.Artifacts).BackColor, "only that box");
+				Assert.AreSame(form.WeaponRarity, form.ActiveControl, "focus on the weapon stars");
+				Assert.IsTrue(timer.Enabled);
+
+				form.Highlight(AdvancedForm.Section.Artifacts);   // another Change before it ended
+				Assert.AreEqual(normal, form.GroupFor(AdvancedForm.Section.Weapons).BackColor, "the first one is off again");
+				Assert.AreSame(form.ArtifactRarity, form.ActiveControl);
+
+				s.NumOfCharToScan = 5;
+				form.Highlight(AdvancedForm.Section.Characters);
+				Assert.AreSame(form.CharacterCount, form.ActiveControl, "the characters choice…");
+				Assert.AreSame(form.CharacterCount.OnlyChoice, form.CharacterCount.ActiveControl, "…on the option that's chosen");
+
+				form.EndHighlight();   // what the timer does after 1.5 s
+				Assert.IsNull(form.Highlighted);
+				Assert.AreEqual(normal, form.GroupFor(AdvancedForm.Section.Characters).BackColor, "looks as before");
+				Assert.IsFalse(timer.Enabled);
+				Assert.AreSame(form.CharacterCount.OnlyChoice, form.CharacterCount.ActiveControl, "the focus stays");
+			});
+		}
+
+		[TestMethod]
 		public void AdvancedListensOnlyWhileShownAndZoomsBackExactly()
 		{
 			int before = UserInterface.Listeners;
