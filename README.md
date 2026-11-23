@@ -80,7 +80,7 @@ Before starting the scanner, you can (optionally) edit the following options:
 
 - Select which categories (weapons, artifacts, characters, items) you want to scan.
 - Configure minimum weapon and artifact rarity to be scanned.
-- "Delay per item" sets the scan speed. **Auto** (recommended) waits for each weapon and artifact card, and each character screen, to finish loading before reading it; it is usually both the fastest and the most reliable choice. The fixed speeds (Fastest 100 ms to Slowest 300 ms) also check the card; pick a slower one if menus or characters are misread. Hover over it to see every wait and the trade-offs. Prefer a slider? Choose Options → Scan Speed Control → Slider.
+- "Delay per item" sets the scan speed. **Auto** (recommended) waits for each weapon and artifact card, and each character screen, to finish loading before reading it; it is usually both the fastest and the most reliable choice. The fixed speeds (Fastest 100 ms to Slowest 300 ms) also check the card; pick a slower one if menus or characters are misread. Hover over it to see every wait and the trade-offs. In the Classic look, you can switch the drop-down to a slider with Options → Scan Speed Control → Slider.
 - Constellations and talent levels are read straight from the lists on the character screen, at every speed; anything unclear is clicked and read the old way.
 - Set the folder the exports are saved to (`Save exports to` in Simple and Advanced, `File Location` in Classic).
 - Inventory Kamera uses the default keybinds to open the inventory (B) and character screens (C). If you changed them in the game, set the same keys under `Options`.
