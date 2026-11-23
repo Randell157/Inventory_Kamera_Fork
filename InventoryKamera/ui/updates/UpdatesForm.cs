@@ -36,7 +36,7 @@ namespace InventoryKamera
 		internal readonly LinkLabel DownloadAgain = new LinkLabel();
 		// Footer
 		internal readonly Label LastChecked = new Label();
-		internal readonly CheckBox Daily = new CheckBox();
+		internal readonly CheckBox Daily = new ZoomCheckBox();
 		internal readonly Button CheckNow = new Button(), Close_ = new Button();
 
 		internal UpdateResult Result { get; private set; }

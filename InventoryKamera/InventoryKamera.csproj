@@ -106,6 +106,12 @@
     <Compile Include="ui\Looks.cs" />
     <Compile Include="ui\ScanSession.cs" />
     <Compile Include="ui\Zoom.cs" />
+    <Compile Include="ui\GameDataLine.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="ui\ZoomCheckBox.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="ui\LookMenu.cs" />
     <Compile Include="ui\ScanWindows.cs" />
     <Compile Include="ui\simple\SimpleText.cs" />

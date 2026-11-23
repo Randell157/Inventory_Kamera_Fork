@@ -24,8 +24,10 @@ namespace InventoryKamera
 {
     // The Classic look: the 1.6 window. Scanning and the startup checks are shared with the other
     // looks (ScanSession, AppStartup); this window only shows and edits the settings.
-    public partial class MainForm : Form, ILookWindow, IScanWindow
+    public partial class MainForm : Form, ILookWindow, IScanWindow, IZoomed
     {
+        internal readonly GameDataLine GameData = new GameDataLine(twoLines: true);
+
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
         public MainForm()
@@ -33,6 +35,15 @@ namespace InventoryKamera
             // Blank Wanderer and mannequin names were already refilled by AppStartup.PrepareSettings,
             // before the boxes bind to the settings.
             InitializeComponent();
+
+            // 1.7.1: the game data version, above Scan Genshin in the status area while the status is empty;
+            // two short lines so it stays inside the left column.
+            GameData.TextAlign = ContentAlignment.BottomLeft;
+            GameData.Name = "GameData_Label";
+            GameData.Bounds = new Rectangle(10, 321, 142, 32);   // ends 1 px before the dark panel, so rounding never reaches it
+            Controls.Add(GameData);
+            GameData.Beside(ProgramStatus_Label, atRowEnd: false);
+            AlignSelectButton();
 
             // Leaving one of these boxes empty fills its default back in (not the Traveler's:
             // empty there means "read the name from the game").
@@ -81,6 +92,7 @@ namespace InventoryKamera
             int choice = ScanSpeeds.ChoiceOf(ScanSpeeds.Valid(Properties.Settings.Default.ScanSpeed));
             if (ScanSpeed_ComboBox.Items.Count > choice && ScanSpeed_ComboBox.SelectedIndex != choice) ScanSpeed_ComboBox.SelectedIndex = choice;
             UserInterface.RefitStatus();
+            GameData.ShowData();
             ManualExportButton.Enabled = ScanWindows.CanOpenOptimizer;   // a scan in another look may have ended
         }
 
@@ -91,6 +103,7 @@ namespace InventoryKamera
         {
             foreach (var box in new[] { travelerNameTextBox, wandererNameTextBox, textBox1, textBox2 })
                 ValidateCustomName(box, EventArgs.Empty);
+            GameData.ShowData();
         }
 
         // IScanWindow
@@ -323,7 +336,44 @@ namespace InventoryKamera
             ScannerDelay_Label.Text = ScanSpeed_TrackBar.Visible && ScanSpeed_ComboBox.SelectedIndex >= 0
                 ? ScanSpeeds.SliderHeading(ScanSpeeds.StepAt(ScanSpeed_ComboBox.SelectedIndex))
                 : "Delay per item";
+            FitScanSpeedHeading();
         }
+
+        #region After a zoom (1.7.1)
+
+        void IZoomed.Zoomed(int percent)
+        {
+            FitScanSpeedHeading();
+            // The speed drop-down draws its own items (OwnerDrawFixed) at a fixed 15 px; zoomed, its text was cut off.
+            ScanSpeed_ComboBox.ItemHeight = Math.Max(15 * percent / Zoom.Normal, ScanSpeed_ComboBox.Font.Height + 2);
+            AlignSelectButton();
+        }
+
+        // Zoomed, the path box got taller than the scaled button and covered its right edge, so the button
+        // matches the box's height and ends where the box starts. At every zoom, 100 % too: a window opened
+        // zoomed remembers its zoomed sizes as the starting point, so a "zoomed only" fix came back too small
+        // at 100 % (live 2026-11-22: "Select" cut off after 175 % → 100 %).
+        private void AlignSelectButton()
+        {
+            FileSelectButton.Top = OutputPath_TextBox.Top;
+            FileSelectButton.Height = OutputPath_TextBox.Height;
+            FileSelectButton.Width = OutputPath_TextBox.Left - FileSelectButton.Left;
+        }
+
+        // The heading's box ends where the dark panel starts (it used to size itself and ran 6 px under it).
+        // "Speed: Auto (recommended)" just fits at 100 %; zoomed, text grows faster than the layout, so the
+        // font gets just small enough for the text to fit.
+        private void FitScanSpeedHeading()
+        {
+            var label = ScannerDelay_Label;
+            label.ResetFont();
+            label.Width = ScannerOutput_Panel.Left - label.Left;
+            var font = Font;
+            for (float size = font.Size - 0.25f; TextRenderer.MeasureText(label.Text, label.Font).Width > label.Width && size >= 6; size -= 0.25f)
+                label.Font = new Font(font.FontFamily, size, font.Style, font.Unit);
+        }
+
+        #endregion
 
         // Drawn by the form (DrawMode.OwnerDrawFixed) only so it can tell which choice is under the pointer:
         // while the list is open, Windows highlights that choice, and its tooltip is shown beside the list.

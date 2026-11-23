@@ -142,6 +142,9 @@ namespace InventoryKamera
 		{
 			float factor = percent / (float)snapshot.Percent;
 			window.SuspendLayout();
+			// Before the fonts change, so a checkbox's new size is worked out with its new square.
+			foreach (var (control, _, _, _) in snapshot.Bounds)
+				if (control is ZoomCheckBox box) box.ZoomPercent = percent;
 			window.Font = Scaled(snapshot.FormFont, factor);
 			foreach (var (control, font) in snapshot.OwnFonts) control.Font = Scaled(font, factor);
 			foreach (var (strip, size) in snapshot.Images)
@@ -163,6 +166,7 @@ namespace InventoryKamera
 			// A menu measures its items again only when told to; otherwise it keeps the height of the last zoom.
 			foreach (var (strip, _) in snapshot.Images) strip.PerformLayout();
 			window.PerformLayout();
+			(window as IZoomed)?.Zoomed(percent);
 		}
 
 		private static Font Scaled(Font font, float factor) =>
@@ -172,6 +176,13 @@ namespace InventoryKamera
 
 		[DllImport("user32.dll")]
 		private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+	}
+
+	// 1.7.1: a window that fixes a few controls after each zoom. Text grows a little faster than the layout
+	// (the font changes from bitmap to smooth past 100 %), so a tight fit at 100 % can overflow when zoomed.
+	internal interface IZoomed
+	{
+		void Zoomed(int percent);
 	}
 
 	// Where a window goes when it replaces another or changes size.

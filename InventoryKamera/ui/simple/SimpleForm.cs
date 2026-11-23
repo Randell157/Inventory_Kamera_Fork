@@ -17,11 +17,12 @@ namespace InventoryKamera
 		private const int Edge = 12, Inner = 320;
 
 		private readonly MenuStrip menu = new MenuStrip();
-		internal readonly CheckBox Weapons = new CheckBox(), Artifacts = new CheckBox(), Characters = new CheckBox(), DevItems = new CheckBox(), Materials = new CheckBox();
+		internal readonly CheckBox Weapons = new ZoomCheckBox(), Artifacts = new ZoomCheckBox(), Characters = new ZoomCheckBox(), DevItems = new ZoomCheckBox(), Materials = new ZoomCheckBox();
 		internal readonly TextBox TravelerName = new TextBox(), OutputPath = new TextBox();
 		private readonly Button browse = new Button(), scan = new Button(), openFolder = new Button();
 		internal readonly Button OpenOptimizer = new Button();
 		internal readonly LinkLabel Status = new LinkLabel();
+		internal readonly GameDataLine GameData = new GameDataLine();
 		internal readonly Label Counts = new Label();
 		internal readonly ProgressBar Progress = new ProgressBar();
 		internal readonly LinkLabel Errors = new LinkLabel();
@@ -79,6 +80,9 @@ namespace InventoryKamera
 			Status.LinkColor = Status.ActiveLinkColor = Status.VisitedLinkColor = UpdatesForm.Blue;
 			Status.LinkClicked += (s, e) => UpdatesForm.ShowFor(this);
 			Controls.Add(Status);
+			GameData.TextAlign = ContentAlignment.MiddleLeft;
+			Controls.Add(GameData);
+			GameData.Beside(Status, atRowEnd: true);   // right of "Ready" (1.7.1)
 			Progress.SetBounds(Edge, 438, Inner, 14);
 			Progress.Visible = false;
 			Controls.Add(Progress);
@@ -323,11 +327,16 @@ namespace InventoryKamera
 		}
 
 		// ILookWindow
-		public void LookupTablesReloaded() => CheckTravelerName();
+		public void LookupTablesReloaded()
+		{
+			CheckTravelerName();
+			GameData.ShowData();
+		}
 
 		public void BecameShown()
 		{
 			StartListening();
+			GameData.ShowData();
 			ShowScan();   // catches up with anything that happened while hidden
 			OpenOptimizer.Enabled = ScanWindows.CanOpenOptimizer;
 		}

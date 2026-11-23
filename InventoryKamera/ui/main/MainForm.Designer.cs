@@ -1,4 +1,4 @@
-﻿namespace InventoryKamera
+namespace InventoryKamera
 {
     partial class MainForm
     {
@@ -95,11 +95,11 @@
             this.label1 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.equipWeaponToolTip = new System.Windows.Forms.ToolTip(this.components);
-            this.EquipWeaponsCheckBox = new System.Windows.Forms.CheckBox();
+            this.EquipWeaponsCheckBox = new global::InventoryKamera.ZoomCheckBox();
             this.equipArtifactsToolTip = new System.Windows.Forms.ToolTip(this.components);
-            this.EquipArtifactsCheckBox = new System.Windows.Forms.CheckBox();
+            this.EquipArtifactsCheckBox = new global::InventoryKamera.ZoomCheckBox();
             this.screenshotsToolTip = new System.Windows.Forms.ToolTip(this.components);
-            this.LogScreenshotsCheckBox = new System.Windows.Forms.CheckBox();
+            this.LogScreenshotsCheckBox = new global::InventoryKamera.ZoomCheckBox();
             this.SortByObtained = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
             this.NumOfCharToScanControl = new System.Windows.Forms.NumericUpDown();
@@ -110,11 +110,11 @@
             this.MinimumWeaponLevelControl = new System.Windows.Forms.NumericUpDown();
             this.ArtifactRarityControl = new System.Windows.Forms.NumericUpDown();
             this.WeaponRarityControl = new System.Windows.Forms.NumericUpDown();
-            this.Materials_CheckBox = new System.Windows.Forms.CheckBox();
-            this.CharDevItems_CheckBox = new System.Windows.Forms.CheckBox();
-            this.Characters_CheckBox = new System.Windows.Forms.CheckBox();
-            this.Artifacts_Checkbox = new System.Windows.Forms.CheckBox();
-            this.Weapons_CheckBox = new System.Windows.Forms.CheckBox();
+            this.Materials_CheckBox = new global::InventoryKamera.ZoomCheckBox();
+            this.CharDevItems_CheckBox = new global::InventoryKamera.ZoomCheckBox();
+            this.Characters_CheckBox = new global::InventoryKamera.ZoomCheckBox();
+            this.Artifacts_Checkbox = new global::InventoryKamera.ZoomCheckBox();
+            this.Weapons_CheckBox = new global::InventoryKamera.ZoomCheckBox();
             this.ScanSpeed_ComboBox = new System.Windows.Forms.ComboBox();
             this.ScanSpeed_TrackBar = new System.Windows.Forms.TrackBar();
             this.ScanSpeedStart_Label = new System.Windows.Forms.Label();
@@ -578,11 +578,10 @@
             // 
             // ScannerDelay_Label
             // 
-            this.ScannerDelay_Label.AutoSize = true;
             this.ScannerDelay_Label.Location = new System.Drawing.Point(10, 258);
             this.ScannerDelay_Label.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.ScannerDelay_Label.Name = "ScannerDelay_Label";
-            this.ScannerDelay_Label.Size = new System.Drawing.Size(76, 13);
+            this.ScannerDelay_Label.Size = new System.Drawing.Size(143, 14);
             this.ScannerDelay_Label.TabIndex = 69;
             this.ScannerDelay_Label.Text = "Delay per item";
             // 
@@ -1057,7 +1056,6 @@
             this.CharDevItems_CheckBox.Checked = global::InventoryKamera.Properties.Settings.Default.ScanCharDevItems;
             this.CharDevItems_CheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.CharDevItems_CheckBox.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::InventoryKamera.Properties.Settings.Default, "ScanCharDevItems", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.CharDevItems_CheckBox.Font = new System.Drawing.Font("Microsoft Sans Serif", 7F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.CharDevItems_CheckBox.Location = new System.Drawing.Point(11, 131);
             this.CharDevItems_CheckBox.Margin = new System.Windows.Forms.Padding(2);
             this.CharDevItems_CheckBox.Name = "CharDevItems_CheckBox";
@@ -1072,7 +1070,6 @@
             this.Characters_CheckBox.Checked = global::InventoryKamera.Properties.Settings.Default.ScanCharacters;
             this.Characters_CheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.Characters_CheckBox.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::InventoryKamera.Properties.Settings.Default, "ScanCharacters", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.Characters_CheckBox.Font = new System.Drawing.Font("Microsoft Sans Serif", 7F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Characters_CheckBox.Location = new System.Drawing.Point(11, 115);
             this.Characters_CheckBox.Margin = new System.Windows.Forms.Padding(2);
             this.Characters_CheckBox.Name = "Characters_CheckBox";
@@ -1087,7 +1084,6 @@
             this.Artifacts_Checkbox.Checked = global::InventoryKamera.Properties.Settings.Default.ScanArtifacts;
             this.Artifacts_Checkbox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.Artifacts_Checkbox.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::InventoryKamera.Properties.Settings.Default, "ScanArtifacts", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.Artifacts_Checkbox.Font = new System.Drawing.Font("Microsoft Sans Serif", 7F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Artifacts_Checkbox.Location = new System.Drawing.Point(11, 99);
             this.Artifacts_Checkbox.Margin = new System.Windows.Forms.Padding(2);
             this.Artifacts_Checkbox.Name = "Artifacts_Checkbox";
@@ -1102,7 +1098,6 @@
             this.Weapons_CheckBox.Checked = global::InventoryKamera.Properties.Settings.Default.ScanWeapons;
             this.Weapons_CheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.Weapons_CheckBox.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::InventoryKamera.Properties.Settings.Default, "ScanWeapons", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.Weapons_CheckBox.Font = new System.Drawing.Font("Microsoft Sans Serif", 7F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Weapons_CheckBox.Location = new System.Drawing.Point(11, 82);
             this.Weapons_CheckBox.Margin = new System.Windows.Forms.Padding(2);
             this.Weapons_CheckBox.Name = "Weapons_CheckBox";
@@ -1341,16 +1336,16 @@
         private System.Windows.Forms.ToolStripMenuItem scanSpeedDropDownMenuItem;
         private System.Windows.Forms.ToolStripMenuItem scanSpeedSliderMenuItem;
         private System.Windows.Forms.Label ScannerDelay_Label;
-        private System.Windows.Forms.CheckBox Weapons_CheckBox;
+        private global::InventoryKamera.ZoomCheckBox Weapons_CheckBox;
         private System.Windows.Forms.Label ScanItemsList_Label;
-        private System.Windows.Forms.CheckBox Artifacts_Checkbox;
-        private System.Windows.Forms.CheckBox Characters_CheckBox;
+        private global::InventoryKamera.ZoomCheckBox Artifacts_Checkbox;
+        private global::InventoryKamera.ZoomCheckBox Characters_CheckBox;
         private System.Windows.Forms.Label ScanSpeedHint_Label;
         private System.Windows.Forms.Button FileSelectButton;
         private System.Windows.Forms.Label FileLocation_Label;
         private System.Windows.Forms.TextBox OutputPath_TextBox;
         private System.Windows.Forms.Label Language_Label;
-        private System.Windows.Forms.CheckBox CharDevItems_CheckBox;
+        private global::InventoryKamera.ZoomCheckBox CharDevItems_CheckBox;
 		private System.Windows.Forms.MenuStrip menuStrip1;
 		private System.Windows.Forms.ToolStripMenuItem fileToolStripMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem keysToolStripMenuItem;
@@ -1360,7 +1355,7 @@
 		private System.Windows.Forms.ToolStripMenuItem characterScreenToolStripMenuItem;
 		private System.Windows.Forms.ToolStripTextBox characterToolStripTextBox;
 		private System.Windows.Forms.PictureBox GearPictureBox;
-		private System.Windows.Forms.CheckBox Materials_CheckBox;
+		private global::InventoryKamera.ZoomCheckBox Materials_CheckBox;
 		private System.Windows.Forms.ToolStripMenuItem DatabaseUpdateMenuItem;
 		private System.Windows.Forms.NumericUpDown WeaponRarityControl;
 		private System.Windows.Forms.Label label2;
@@ -1372,10 +1367,10 @@
         private System.Windows.Forms.Label MinimumArtifactLevelLabel;
         private System.Windows.Forms.NumericUpDown MinimumWeaponLevelControl;
         private System.Windows.Forms.NumericUpDown numericUpDown1;
-        private System.Windows.Forms.CheckBox LogScreenshotsCheckBox;
+        private global::InventoryKamera.ZoomCheckBox LogScreenshotsCheckBox;
         private System.Windows.Forms.Button ManualExportButton;
-        private System.Windows.Forms.CheckBox EquipArtifactsCheckBox;
-        private System.Windows.Forms.CheckBox EquipWeaponsCheckBox;
+        private global::InventoryKamera.ZoomCheckBox EquipArtifactsCheckBox;
+        private global::InventoryKamera.ZoomCheckBox EquipWeaponsCheckBox;
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.TextBox travelerNameTextBox;
         private System.Windows.Forms.Label label1;

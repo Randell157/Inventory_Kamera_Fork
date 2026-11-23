@@ -19,8 +19,8 @@ namespace InventoryKamera
 		private const int Left_ = 12, Right_ = 564, RightWidth = 288, Half = 265;
 
 		private readonly MenuStrip menu = new MenuStrip();
-		internal readonly CheckBox Weapons = new CheckBox(), Artifacts = new CheckBox(), Characters = new CheckBox(), DevItems = new CheckBox(), Materials = new CheckBox();
-		internal readonly CheckBox LogScreenshots = new CheckBox(), EquipWeapons = new CheckBox(), EquipArtifacts = new CheckBox();
+		internal readonly CheckBox Weapons = new ZoomCheckBox(), Artifacts = new ZoomCheckBox(), Characters = new ZoomCheckBox(), DevItems = new ZoomCheckBox(), Materials = new ZoomCheckBox();
+		internal readonly CheckBox LogScreenshots = new ZoomCheckBox(), EquipWeapons = new ZoomCheckBox(), EquipArtifacts = new ZoomCheckBox();
 		internal readonly ComboBox ScanSpeed = new ComboBox();
 		private readonly Label scanSpeedHint = new Label();
 		internal ScanSpeedTips SpeedTips { get; private set; }
@@ -34,6 +34,7 @@ namespace InventoryKamera
 		private readonly Button scan = new Button();
 		internal readonly Button OpenOptimizer = new Button();
 		internal readonly LinkLabel Status = new LinkLabel();
+		internal readonly GameDataLine GameData = new GameDataLine();
 		internal readonly Label ErrorTitle = new Label();
 		private readonly Label weaponCount = new Label(), weaponMax = new Label(), artifactCount = new Label(), artifactMax = new Label(), characterCount = new Label();
 		private readonly PictureBox gearPicture = new PictureBox(), characterPicture = new PictureBox();
@@ -273,6 +274,9 @@ namespace InventoryKamera
 			Status.LinkColor = Status.ActiveLinkColor = Status.VisitedLinkColor = UpdatesForm.Blue;
 			Status.LinkClicked += (s, e) => UpdatesForm.ShowFor(this);
 			Controls.Add(Status);
+			GameData.TextAlign = ContentAlignment.MiddleLeft;
+			Controls.Add(GameData);
+			GameData.Beside(Status, atRowEnd: true);   // right of "Ready" (1.7.1)
 
 			void Row(string text, int y, Label count, Label max)
 			{
@@ -495,11 +499,13 @@ namespace InventoryKamera
 		public void LookupTablesReloaded()
 		{
 			foreach (var (box, _, key) in Names) CheckName(box, key);
+			GameData.ShowData();
 		}
 
 		public void BecameShown()
 		{
 			StartListening();
+			GameData.ShowData();
 			ShowScanSpeed();
 			ShowScan();   // catches up with anything that happened while hidden
 			OpenOptimizer.Enabled = ScanWindows.CanOpenOptimizer;

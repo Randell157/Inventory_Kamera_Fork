@@ -76,6 +76,8 @@ Inventory Kamera has three looks; switch between them from the `View` menu (your
 
 `View` → `Zoom` makes any look bigger (100% to 300%); sizes that don't fit your screen are greyed out.
 
+Next to the Scan button, every look shows which Genshin version its game data is for ("Game data: Genshin 7.2"). When the daily update check finds newer game data, a "7.3 available" link opens the Updates window; if the game data is missing, "Get it" downloads it. While the status line needs the room (during a scan, for example), the line steps aside.
+
 Before starting the scanner, you can (optionally) edit the following options:
 
 - Select which categories (weapons, artifacts, characters, items) you want to scan.

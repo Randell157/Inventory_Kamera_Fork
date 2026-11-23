@@ -312,6 +312,108 @@ namespace InventoryKamera.Tests
 			}
 		}
 
+		// Live 2026-11-22 (1.7.1 check): opened at the saved 175 %, then View → Zoom → 100 %: Classic's
+		// Select button came back shorter than designed, with its text cut off. A window opened zoomed and then
+		// set to 100 % must look exactly like one opened at 100 %, in every look.
+		[TestMethod]
+		public void OpenedZoomedThenSetTo100MatchesOpenedAt100()
+		{
+			var isolation = new MaterialQuantityTests();
+			isolation.IsolateSettingsDataAndLogs();
+			try
+			{
+				AppStartup.PrepareSettings();
+				foreach (var make in new System.Func<Form>[] { () => new SimpleForm(), () => new AdvancedForm(), () => new MainForm() })
+					foreach (int saved in new[] { 125, 175, 300 })
+						using (var fresh = make())
+						using (var zoomed = make())
+						{
+							Bind(fresh); Bind(zoomed);
+							// The app opens at the biggest step that fits the screen (a taller window would be cut by Windows).
+							int opened = Zoom.Usable(saved, Zoom.Measure(zoomed), Screen.PrimaryScreen.WorkingArea);
+							Zoom.Apply(zoomed, opened);   // how a launch at a saved zoom opens the window
+							Zoom.Set(zoomed, 150);
+							Zoom.Set(zoomed, 100);
+							var want = Layout(fresh); var got = Layout(zoomed);
+							var differ = want.Zip(got, (w, g) => (w, g)).Where(p => p.w != p.g).Select(p => $"\n  want {p.w}\n  got  {p.g}").Take(6);
+							Assert.IsTrue(want.Count == got.Count && !differ.Any(), $"{fresh.GetType().Name} opened at {opened} %, then 100 %:{string.Concat(differ)}");
+						}
+			}
+			finally
+			{
+				isolation.RestoreGlobalsAndRemoveOwnSandbox();
+				UserInterface.Init(null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+			}
+		}
+
+		// Live 2026-11-22 (1.7.0, Classic at 150–175 %): four scan checkboxes looked smaller than Materials, the
+		// slider's "Speed: Auto (recommended)" ran into the dark panel, and the Select button stuck out below
+		// the path box with its right edge covered.
+		[TestMethod]
+		public void ClassicZoomKeepsCheckboxesHeadingAndSelectButtonInPlace()
+		{
+			var isolation = new MaterialQuantityTests();
+			isolation.IsolateSettingsDataAndLogs();
+			try
+			{
+				AppStartup.PrepareSettings();
+				using (var form = new MainForm())
+				{
+					Bind(form);
+					T Field<T>(string name) => (T)typeof(MainForm).GetField(name, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(form);
+					var boxes = new[] { "Weapons_CheckBox", "Artifacts_Checkbox", "Characters_CheckBox", "CharDevItems_CheckBox", "Materials_CheckBox" }.Select(Field<CheckBox>).ToArray();
+					var heading = Field<Label>("ScannerDelay_Label");
+					var panel = Field<Panel>("ScannerOutput_Panel");
+					var select = Field<Button>("FileSelectButton");
+					var path = Field<TextBox>("OutputPath_TextBox");
+					var speeds = Field<ComboBox>("ScanSpeed_ComboBox");
+
+					// The user chose the normal font at 100 % too: the boxes may touch, but each one's text stays clear of the next.
+					for (int i = 1; i < boxes.Length; i++)
+						Assert.IsTrue(boxes[i].Top - boxes[i - 1].Top >= boxes[i - 1].Font.Height, $"{boxes[i - 1].Text} and {boxes[i].Text} at 100 %");
+					var selectAt100 = select.Bounds;
+					var headingFontAt100 = heading.Font;
+
+					typeof(MainForm).GetMethod("LoadScanSpeed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).Invoke(form, null);   // normally on Load
+					typeof(MainForm).GetMethod("ShowScanSpeedControl", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).Invoke(form, new object[] { ScanSpeeds.Slider });
+					speeds.SelectedIndex = 0;
+					// An unshown form's slider counts as hidden, so the heading is set as the shown slider would set it.
+					heading.Text = ScanSpeeds.SliderHeading(ScanSpeeds.StepAt(0));
+					StringAssert.Contains(heading.Text, "recommended");   // Auto: the longest heading
+
+					foreach (int step in Zoom.Steps.Concat(new[] { 150, 100 }))
+					{
+						Zoom.Set(form, step);
+						foreach (var box in boxes) Assert.AreEqual(boxes[4].Font.Size, box.Font.Size, $"{box.Text} at {step} %");
+						Assert.IsTrue(heading.Right <= panel.Left, $"heading ends at {heading.Right}, panel starts at {panel.Left} ({step} %)");
+						Assert.IsTrue(TextRenderer.MeasureText(heading.Text, heading.Font).Width <= heading.Width, $"heading text fits its box at {step} %");
+						Assert.IsTrue(heading.Font.Height <= heading.Height + 1, $"heading text isn't cut off at the bottom at {step} %");
+						Assert.IsTrue(speeds.ItemHeight >= speeds.Font.Height, $"speed drop-down items {speeds.ItemHeight} px for {speeds.Font.Height} px text at {step} %");
+						if (step == Zoom.Normal) Assert.AreEqual(15, speeds.ItemHeight, "drop-down as designed at 100 %");
+						foreach (Control c in form.Controls)
+							// The status line's designer text is a placeholder; SetProgramStatus fits the real text (StatusWidth).
+							if (c != panel && c.Name != "ProgramStatus_Label" && c.Left < panel.Left && c.Top < panel.Bottom && c.Bottom > panel.Top && (c is Label || c is CheckBox))
+								Assert.IsTrue(c.Right <= panel.Left, $"{c.Name} runs into the dark panel at {step} %");
+						if (step == Zoom.Normal)
+						{
+							Assert.AreEqual(selectAt100, select.Bounds, "Select button as built at 100 %");
+							Assert.AreEqual(headingFontAt100, heading.Font, "heading font as designed at 100 %");
+						}
+						Assert.AreEqual(path.Top, select.Top, $"Select top at {step} %");
+						Assert.AreEqual(path.Bottom, select.Bottom, $"Select bottom at {step} %");
+						Assert.AreEqual(path.Left, select.Right, $"Select ends where the path box starts at {step} %");
+						var selectText = TextRenderer.MeasureText(select.Text, select.Font);
+						Assert.IsTrue(selectText.Width <= select.Width && selectText.Height <= select.Height + 2, $"Select text {selectText} fits {select.Size} at {step} %");
+					}
+				}
+			}
+			finally
+			{
+				isolation.RestoreGlobalsAndRemoveOwnSandbox();
+				UserInterface.Init(null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+			}
+		}
+
 		// Live 2026-11-22: a scan in Advanced, then View → Simple: Simple's Optimizer button stayed grey.
 		[TestMethod]
 		public void OptimizerButtonCatchesUpWhenALookIsShownAgain()
