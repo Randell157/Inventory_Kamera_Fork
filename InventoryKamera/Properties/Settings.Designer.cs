@@ -155,6 +155,19 @@ namespace InventoryKamera.Properties {
             }
         }
         
+        // 1.7.2: the last update check's result (JSON), so the update button survives a restart.
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string LastUpdateResult {
+            get {
+                return ((string)(this["LastUpdateResult"]));
+            }
+            set {
+                this["LastUpdateResult"] = value;
+            }
+        }
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("1000-01-01")]

@@ -71,8 +71,19 @@ namespace InventoryKamera
 
 		// The launch check runs when it's switched on and the last one was a day ago or more (or in the future:
 		// the clock was changed).
-		internal static bool CheckDue(bool auto, DateTime lastCheck, DateTime now) =>
-			auto && (now - lastCheck >= Daily || lastCheck > now);
+		// remindAfter: the Remind me later times (app, game data). A reminder that ends after the last check is
+		// still waiting; once it has passed, the launch check is due even if the last one was under a day ago,
+		// so "tomorrow" doesn't turn into two days (check 17:00, remind 18:00, launch 17:30 next day: checked
+		// but hidden; launch 18:05: checked again and shown). The check that follows ends the wait.
+		internal static bool CheckDue(bool auto, DateTime lastCheck, DateTime now, params DateTime[] remindAfter) =>
+			auto && (now - lastCheck >= Daily || lastCheck > now || ReminderPassed(lastCheck, now, remindAfter));
+
+		internal static bool ReminderPassed(DateTime lastCheck, DateTime now, params DateTime[] remindAfter)
+		{
+			foreach (var time in remindAfter ?? new DateTime[0])
+				if (time > lastCheck && now >= time) return true;
+			return false;
+		}
 
 		internal static bool ShowApp(UpdateResult result, string skipped, DateTime remindAfter, DateTime now) =>
 			result != null && result.AppNewer && now >= remindAfter &&

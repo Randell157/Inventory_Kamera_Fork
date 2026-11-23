@@ -75,16 +75,21 @@ namespace InventoryKamera
 			ShowResult(UpdateNotice.Last);
 		}
 
-		// Opens the window over the open look (not during a scan), at the same zoom.
-		internal static void ShowFor(Form owner)
+		// Opens the window over the open look (not during a scan), at the same zoom. startWith runs once it's
+		// on screen: the launch popup's Update now / Update game data, already confirmed there.
+		internal static void ShowFor(Form owner, Func<UpdatesForm, Task> startWith = null)
 		{
 			if (ScanSession.IsRunning) return;
 			using (var window = new UpdatesForm())
 			{
 				Zoom.Apply(window, Zoom.Current(owner));
+				if (startWith != null) window.Shown += async (s, e) => await startWith(window);
 				window.ShowDialog(owner);
 			}
 		}
+
+		// Set when the launch popup's Update now was clicked: the download starts without asking again.
+		internal bool AlreadyConfirmed { get; set; }
 
 		#region Building
 
@@ -330,7 +335,7 @@ namespace InventoryKamera
 			if (Result == null || ScanSession.IsRunning) return;
 			try { SelfUpdate.CheckRelease(Result); }
 			catch (UpdateRefused refused) { Refuse(refused.Message); return; }
-			if (!confirm(ConfirmText(Result))) return;
+			if (!AlreadyConfirmed && !confirm(ConfirmText(Result))) return;
 
 			SetBusy(true);
 			UpdateApp.Enabled = Skip.Enabled = AppLater.Enabled = false;

@@ -90,11 +90,11 @@ namespace InventoryKamera
 			var update = new ToolStripMenuItem("Updates…");
 			update.Click += (s, e) => UpdatesForm.ShowFor(this);
 			options.DropDownItems.Add(update);
-			UpdateMark.Attach(this, options, update);
 			options.DropDownItems.Add("Open Export Folder", null, (s, e) => ScanWindows.OpenFolder(OutputPath.Text));
 			options.DropDownItems.Add("Update Executables", null, (s, e) => new ui.ExecutablesForm().Show());
 			options.DropDownOpening += (s, e) => update.Enabled = !ScanSession.IsRunning;
 			menu.Items.AddRange(new ToolStripItem[] { file, LookMenu.Build(Look.Advanced, this), options });
+			UpdateMark.Attach(this, menu, update);
 			MainMenuStrip = menu;
 			Controls.Add(menu);
 		}

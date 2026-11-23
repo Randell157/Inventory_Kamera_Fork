@@ -118,12 +118,17 @@ namespace InventoryKamera
 				await DownloadMissingTablesAsync(window);   // a new install: the data is the newest there is
 
 			var settings = Properties.Settings.Default;
-			if (!Updates.CheckDue(settings.AutoCheckUpdates, settings.LastUpdateCheck, DateTime.Now))
+			var now = DateTime.Now;
+			if (!Updates.CheckDue(settings.AutoCheckUpdates, settings.LastUpdateCheck, now, settings.AppRemindAfter, settings.DataRemindAfter))
 			{
 				Logger.Info(settings.AutoCheckUpdates ? "Update check: last one {0:g}, next after a day" : "Update check: off (checked only with Check now)", settings.LastUpdateCheck);
+				UpdateNotice.Restore(new OnlineUpdateSource().Current, Database?.TablesMissing == false ? Database.LocalVersion : null);   // the button, from the last check
 				return;
 			}
+			if (now - settings.LastUpdateCheck < Updates.Daily && Updates.ReminderPassed(settings.LastUpdateCheck, now, settings.AppRemindAfter, settings.DataRemindAfter))
+				Logger.Info("Update check: a Remind me later time has passed, checking again");
 			await UpdateNotice.CheckNowAsync();
+			UpdatePrompt.ShowAfterCheck(window as Form);   // 1.7.2: asks once when something new turned up
 		}
 
 		// A new install (or one whose download failed) has no lookup tables. Download them with the window

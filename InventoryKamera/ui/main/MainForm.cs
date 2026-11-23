@@ -60,7 +60,7 @@ namespace InventoryKamera
             // View -> Simple / Advanced / Classic and Zoom, between File and Options.
             menuStrip1.Items.Insert(menuStrip1.Items.IndexOf(fileToolStripMenuItem) + 1, LookMenu.Build(Look.Classic, this));
             DatabaseUpdateMenuItem.Text = "Updates…";
-            UpdateMark.Attach(this, keysToolStripMenuItem, DatabaseUpdateMenuItem);
+            UpdateMark.Attach(this, menuStrip1, DatabaseUpdateMenuItem);
         }
 
         // The status, counters, images and error log of a scan show in this window's controls.
