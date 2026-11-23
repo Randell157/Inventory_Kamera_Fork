@@ -4,6 +4,8 @@ Fan-made Genshin Impact tool that scans characters, weapons, artifacts, material
 
 This scanner exports in `.GOOD`, a JSON-based exporting format, which allows you to use it with compatible online Genshin Impact tools. These tools include artifact optimizing tools including [Genshin Optimizer](https://frzyc.github.io/genshin-optimizer/#/), [SEELIE.me](https://seelie.me/) and [Aspirine's Genshin Impact Calculator](https://genshin.aspirine.su/).
 
+> **Origin:** this project started as a fork of [taiwenlee/Inventory_Kamera](https://github.com/taiwenlee/Inventory_Kamera) (1.4.5), which is itself a fork of the original [Andrewthe13th/Inventory_Kamera](https://github.com/Andrewthe13th/Inventory_Kamera). It is now maintained as its own repository. See [Credits](#credits).
+
 > **AI disclosure:** this fork's changes were written with [Claude Code](https://claude.com/claude-code) using Claude Opus 5.5. See [AI-assisted development](#ai-assisted-development).
 
 ## Download
@@ -252,10 +254,10 @@ The code inherited from Andrewthe13th, taiwenlee and dmitry-shishkin (see [Credi
 
 ## Credits
 
-This is a maintained fork. The source code lives at [Randell157/Inventory_Kamera_Fork](https://github.com/Randell157/Inventory_Kamera_Fork).
+This project started as a fork of [taiwenlee/Inventory_Kamera](https://github.com/taiwenlee/Inventory_Kamera), which is itself a fork of [Andrewthe13th/Inventory_Kamera](https://github.com/Andrewthe13th/Inventory_Kamera), and is now maintained as its own repository. The source code lives at [Randell157/Inventory_Kamera_Fork](https://github.com/Randell157/Inventory_Kamera_Fork).
 
 - [Andrewthe13th/Inventory_Kamera](https://github.com/Andrewthe13th/Inventory_Kamera): the original Inventory Kamera.
-- [taiwenlee/Inventory_Kamera](https://github.com/taiwenlee/Inventory_Kamera): the fork this one is based on (version 1.4.5).
+- [taiwenlee/Inventory_Kamera](https://github.com/taiwenlee/Inventory_Kamera): the fork this project started from (version 1.4.5).
 - [dmitry-shishkin/Inventory_Kamera](https://github.com/dmitry-shishkin/Inventory_Kamera): the SDK-style build setup, the Cryo Traveler lookup fix and the material quantity reader (with their offline tests and recorded game data) are adapted from its 1.4.11 release (MIT).
 
 ## License
