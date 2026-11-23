@@ -35,6 +35,7 @@ The agent can't run Genshin. Live verification means the user runs a scan and sh
 
 - Keep the MIT `LICENSE` and its copyright notice intact.
 - The README must credit Andrewthe13th (original) and taiwenlee (the fork this is based on). Credit any adapted code, such as dmitry-shishkin's or rogerioth's (both MIT), in the commit message and README.
+- Keep the README's "Changes since taiwenlee's 1.4.5" section current. Every user-visible change (feature, fix, behavior or look) gets a line under the matching heading in the same change that builds it: under "Not released yet" until it ships, then moved to its heading with the release version in brackets as part of the release commit. Write it for users, not as a commit log.
 - Commit only when the user asks. Push only when the user asks.
 - Show a plan before changing code. Give each change "finished when" checks and verify them one by one.
 - Commit identity is the GitHub no-reply address, already set in the repo config. Never commit a personal email.

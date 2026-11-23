@@ -32,6 +32,7 @@ The Discord server of the original Inventory Kamera project (not run by this for
 - Repository
   - [Reporting a bug, a scanning issue or a question](#creating-a-new-issue)
   - [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
+  - [Changes since taiwenlee's 1.4.5](#changes-since-taiwenlees-145)
   - [AI-assisted development](#ai-assisted-development)
   - [Credits](#credits)
   - [License](#license)
@@ -245,6 +246,54 @@ However, that does not mean it will stay that way forever! We are at the mercy o
 #### What Languages does Inventory Kamera support?
 
 Inventory Kamera only supports _**English**_ currently. This limitation is due to only having a trained dataset available for the English language. The in-game "Game Language" option must be set to English. Scanning efficiency is not guaranteed for other languages. More languages may be implemented in the future but there are no current plans.
+
+## Changes since taiwenlee's 1.4.5
+
+Everything this project changed compared to [taiwenlee/Inventory_Kamera](https://github.com/taiwenlee/Inventory_Kamera) 1.4.5, the version it started from. The version in brackets is the release that brought it. Exports are still GOOD format, and settings from 1.4.5 carry over. Each release's full notes are on the [releases page](https://github.com/Randell157/Inventory_Kamera_Fork/releases).
+
+### Look and feel
+- **Three looks** from a new `View` menu: Simple (the default for new installs), Advanced and Classic (the 1.4.5 window). Switching is instant and remembered. (1.7.0)
+- **Simple** shows what to scan, one line per category with the options in use, `Change` links that open Advanced at that setting, and `Use standard settings`. While scanning it shows progress only. (1.7.0)
+- **Advanced** has every option in a roomier window, with clearer "how many" controls and star ratings for minimum rarity. (1.7.0)
+- **`View` → `Zoom`** from 100% to 300% in every look, including checkboxes and menu ticks drawn sharp at the zoomed size. (1.7.0, 1.7.1, 1.7.3)
+- **"Game data: Genshin 7.2"** next to the Scan button, with "7.3 available" or "Get it" links. (1.7.1)
+- **`Help` menu** in Simple and Advanced with the GitHub page, releases and issue page. (1.7.3)
+- **"Delay per item" drop-down** replaces the three-step speed slider, with tooltips for every wait; the slider is still under `Options` → `Scan Speed Control`. (1.6.0)
+- A summary popup and a flashing taskbar icon when a scan finishes; no Genshin Optimizer prompt after every scan. (1.5.0)
+- Readable contrast for the status text, links and error box; long status messages wrap onto two lines. (1.6.0, 1.6.1)
+- Name boxes: no false yellow warning for the Wanderer's and mannequins' own names, one hover tip, and emptied boxes refill their default. (1.6.0)
+
+### Scanning speed and reliability
+- **Auto scan speed** (the default for new installs): each weapon and artifact card, and each character screen, is read as soon as it has finished loading. (1.6.0, 1.6.1)
+- **Faster character scan:** constellations and talent levels are read from the lists on the character screen instead of clicking each one (about 4 s per character on Auto). (1.6.0)
+- Cards are read only once they stop changing, so no stale locks or doubled artifacts. (1.6.0)
+- Inventory tabs are confirmed by name before scanning. (1.5.0)
+- The character scan starts at party slot 1 (the saved slot-1 key is repaired). (1.5.1)
+- Scans start on the first press: the last scan's screenshots are cleared in the background. (1.5.1)
+
+### Exported data
+- **Cryo Traveler** is scanned. (1.5.0)
+- **Material counts** read correctly, including counts that 1.4.5 exported as 0 or junk; an unreadable count is left out and logged instead of exported as 0. (1.5.0, 1.6.0)
+- **Character ascension** is checked against the game's real level caps. (1.5.0)
+- **Weapon and artifact locks** are read from the red padlock, so locked items export as locked. (1.5.1, 1.6.0)
+- The Traveler no longer gets a made-up extra weapon, and starter weapons get their own ids. (1.5.1)
+- Equipped items keep their holder even when a portrait covers the "Equipped" bar. (1.6.0)
+- Long or cut-off character names are read correctly. (1.6.0)
+
+### Game data and updates
+- **One Updates window** (`Options` → `Updates…`) for the app and the game data, with release notes, `Check now`, `Skip this version` and `Remind me later`. (1.7.0)
+- **One-click app update** that checks the download against GitHub's SHA-256 checksum, replaces the program files and restarts; settings, lookup tables, logs and exports are not touched. (1.7.0)
+- A once-a-day check, a blue `⬆ Update to …` button in the menu bar, and a launch popup when something new is found. (1.7.0, 1.7.2)
+- Updating the lookup tables also refreshes characters already in your lists, and constellation talents come from the game's own skill links. (1.6.0)
+- The first lookup-table download happens after the window opens, with a clear popup on success or failure; `Scan Genshin` waits until the tables are there. (1.6.1)
+- The update check and all links point to this repository. (1.5.0)
+
+### Under the hood
+- Builds with the `dotnet` CLI (SDK-style projects, adapted from dmitry-shishkin's 1.4.11), plus an offline MSTest test project. (1.5.0)
+- Dead code, an unused library and the last compiler warnings removed. (1.6.0)
+
+### Not released yet
+- Nothing yet.
 
 ## AI-assisted development
 
