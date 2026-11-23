@@ -129,8 +129,20 @@ namespace InventoryKamera
 					{
 						snapshot.Images.Add((strip, strip.ImageScalingSize));
 						foreach (ToolStripItem item in strip.Items) snapshot.Items.Add((item, item.Padding, item.Margin));
+						CollectDropDowns(strip.Items);
 					}
 					Collect(child);
+				}
+			}
+			// 1.7.3: the drop-down menus (View, Zoom, Options …) too, so their tick column grows with the zoom;
+			// ZoomMenuRenderer.ScaleMenu moves the text over to make room and draws the tick to fill it.
+			void CollectDropDowns(ToolStripItemCollection items)
+			{
+				if (!ZoomMenuRenderer.CanScaleMenus) return;   // a bigger tick area alone would cover the text
+				foreach (var drop in items.OfType<ToolStripDropDownItem>().Where(i => i.HasDropDownItems))
+				{
+					snapshot.Images.Add((drop.DropDown, drop.DropDown.ImageScalingSize));
+					CollectDropDowns(drop.DropDownItems);
 				}
 			}
 			Collect(window);
@@ -148,7 +160,10 @@ namespace InventoryKamera
 			window.Font = Scaled(snapshot.FormFont, factor);
 			foreach (var (control, font) in snapshot.OwnFonts) control.Font = Scaled(font, factor);
 			foreach (var (strip, size) in snapshot.Images)
+			{
 				strip.ImageScalingSize = new Size((int)Math.Round(size.Width * factor), (int)Math.Round(size.Height * factor));
+				if (strip is ToolStripDropDownMenu dropDown) ZoomMenuRenderer.ScaleMenu(dropDown, percent);
+			}
 			foreach (var (control, bounds, padding, margin) in snapshot.Bounds)
 			{
 				control.Bounds = bounds;

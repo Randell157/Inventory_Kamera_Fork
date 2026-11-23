@@ -22,6 +22,7 @@ namespace InventoryKamera
 
 				Application.EnableVisualStyles();
 				Application.SetCompatibleTextRenderingDefault(false);
+				ToolStripManager.Renderer = new ZoomMenuRenderer();   // 1.7.3: menu ticks that grow with View → Zoom
 				// One window at a time in the chosen look (1.7: Simple, Advanced or Classic).
 				Application.Run(new LookContext());
             }

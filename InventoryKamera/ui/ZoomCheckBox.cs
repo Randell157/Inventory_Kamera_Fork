@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
@@ -9,8 +10,8 @@ namespace InventoryKamera
 {
 	// 1.7.1: a checkbox whose square grows with View → Zoom. Windows draws a normal checkbox's square at a
 	// fixed size for the screen, so at 175 % it looked tiny next to the text. At 100 % this is a plain
-	// CheckBox; zoomed, it draws Windows' own checkbox image asked for at the zoomed DPI (so it stays sharp),
-	// then the text after it, and sizes itself to fit both.
+	// CheckBox; zoomed, it draws the square at the size Windows gives for the zoomed DPI (as smooth shapes in
+	// Windows' colours, 1.7.3), then the text after it, and sizes itself to fit both.
 	internal class ZoomCheckBox : CheckBox
 	{
 		private int zoom = Zoom.Normal;
@@ -107,28 +108,144 @@ namespace InventoryKamera
 				return new Size(side, side);
 			}
 
+			// 1.7.3: Windows has one small checkbox picture and stretches it for any other size, so zoomed ticks
+			// looked jagged (live 2026-11-22). Zoomed, the square and tick are drawn as smooth shapes instead, in
+			// the colours of Windows' own picture for that state (so they match 100 % and the Windows theme).
 			internal static void Draw(Graphics g, Rectangle square, int dpi, CheckBoxState state)
 			{
-				var theme = Theme(dpi);
-				if (theme != IntPtr.Zero)
-				{
-					var rect = new RECT { left = square.Left, top = square.Top, right = square.Right, bottom = square.Bottom };
-					var offset = g.Transform.OffsetX;   // a double-buffered paint has no offset; keep it general
-					rect.left += (int)offset; rect.right += (int)offset;
-					rect.top += (int)g.Transform.OffsetY; rect.bottom += (int)g.Transform.OffsetY;
-					IntPtr hdc = g.GetHdc();
-					try { if (DrawThemeBackground(theme, hdc, BP_CHECKBOX, (int)state, ref rect, IntPtr.Zero) == 0) return; }
-					finally { g.ReleaseHdc(hdc); }
-				}
+				var look = LookOf(state);
+				if (look != null) { DrawSmooth(g, square, look); return; }
 				var flat = ButtonState.Flat
 					| (state >= CheckBoxState.CheckedNormal && state <= CheckBoxState.CheckedDisabled ? ButtonState.Checked : 0)
 					| (state == CheckBoxState.UncheckedDisabled || state == CheckBoxState.CheckedDisabled || state == CheckBoxState.MixedDisabled ? ButtonState.Inactive : 0);
 				ControlPaint.DrawCheckBox(g, square, flat);
 			}
 
+			// The colours of Windows' checkbox picture for one state, read from it at 100 %.
+			internal sealed class Look
+			{
+				internal Color Fill, Border;
+				internal Color? Mark;      // the tick (or the dash of a half-ticked box); none when unticked
+				internal bool Rounded;     // Windows 11 rounds the corners, Windows 10 doesn't
+				internal bool Dash;        // half-ticked
+			}
+			private static readonly Dictionary<CheckBoxState, Look> looks = new Dictionary<CheckBoxState, Look>();
+			private static readonly Color Behind = Color.FromArgb(240, 240, 240);
+
+			// Null without themes (then the plain square is drawn).
+			internal static Look LookOf(CheckBoxState state)
+			{
+				var theme = Theme(96);
+				if (theme == IntPtr.Zero) return null;
+				lock (looks)
+				{
+					if (looks.TryGetValue(state, out var known)) return known;
+					var size = SizeAt(96);
+					Look look = null;
+					using (var picture = new Bitmap(size.Width, size.Height))
+					{
+						bool drawn;
+						using (var g = Graphics.FromImage(picture))
+						{
+							g.Clear(Behind);
+							drawn = DrawPicture(g, new Rectangle(Point.Empty, size), 96, state);
+						}
+						if (drawn)
+						{
+							look = Read(picture);
+							look.Dash = state >= CheckBoxState.MixedNormal && state <= CheckBoxState.MixedDisabled;
+						}
+					}
+					looks[state] = look;
+					return look;
+				}
+			}
+
+			// Windows' own picture for a DPI (stretched by Windows when it has none that size). False if it couldn't.
+			internal static bool DrawPicture(Graphics g, Rectangle square, int dpi, CheckBoxState state)
+			{
+				var theme = Theme(dpi);
+				if (theme == IntPtr.Zero) return false;
+				var rect = new RECT { left = square.Left, top = square.Top, right = square.Right, bottom = square.Bottom };
+				IntPtr hdc = g.GetHdc();
+				try { return DrawThemeBackground(theme, hdc, BP_CHECKBOX, (int)state, ref rect, IntPtr.Zero) == 0; }
+				finally { g.ReleaseHdc(hdc); }
+			}
+
+			// Border: the middle of the top edge. Fill: just inside it, above where any tick goes. Mark: the
+			// pixel most unlike the fill, if it's clearly different.
+			private static Look Read(Bitmap p)
+			{
+				int mid = p.Width / 2;
+				var look = new Look
+				{
+					Border = p.GetPixel(mid, 0),
+					Fill = p.GetPixel(mid, Math.Max(1, p.Height / 6)),
+					Rounded = p.GetPixel(0, 0).ToArgb() != p.GetPixel(mid, 0).ToArgb(),
+				};
+				int best = 0; Color mark = look.Fill;
+				for (int y = 2; y < p.Height - 2; y++)
+					for (int x = 2; x < p.Width - 2; x++)
+					{
+						var c = p.GetPixel(x, y);
+						int d = Math.Abs(c.R - look.Fill.R) + Math.Abs(c.G - look.Fill.G) + Math.Abs(c.B - look.Fill.B);
+						if (d > best) { best = d; mark = c; }
+					}
+				if (best > 150) look.Mark = mark;
+				return look;
+			}
+
+			internal static void DrawSmooth(Graphics g, Rectangle square, Look look)
+			{
+				var smoothing = g.SmoothingMode; var offset = g.PixelOffsetMode;
+				g.SmoothingMode = SmoothingMode.AntiAlias;
+				g.PixelOffsetMode = PixelOffsetMode.Half;   // pixel n covers n..n+1, so the 1-pixel border is crisp
+				try
+				{
+					// Whole pixels, so the border is crisp and in Windows' colour; a little thinner than a stretched
+					// 1-pixel border, which looked heavy at 250–300 %. Drawn as the outer shape in the border colour
+					// with the inner shape in the fill colour on top.
+					int border = Math.Max(1, (int)Math.Round(square.Width / 16f));
+					float radius = look.Rounded ? square.Width * 0.17f : 0;
+					var inner = RectangleF.Inflate(square, -border, -border);
+					using (var outer = Outline(square, radius))
+					using (var inside = Outline(inner, Math.Max(0, radius - border)))
+					using (var borderBrush = new SolidBrush(look.Border))
+					using (var fill = new SolidBrush(look.Fill))
+					{
+						g.FillPath(borderBrush, outer);
+						g.FillPath(fill, inside);
+					}
+					if (look.Mark is Color mark)
+					{
+						if (!look.Dash) ZoomMenuRenderer.DrawTick(g, square, mark);
+						else using (var pen = new Pen(mark, Math.Max(1.5f, square.Width / 10.5f)) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+							g.DrawLine(pen, square.X + square.Width * 0.3f, square.Y + square.Height * 0.5f, square.X + square.Width * 0.7f, square.Y + square.Height * 0.5f);
+					}
+				}
+				finally { g.SmoothingMode = smoothing; g.PixelOffsetMode = offset; }
+			}
+
+			private static GraphicsPath Outline(RectangleF r, float radius)
+			{
+				var path = new GraphicsPath();
+				if (radius <= 0) { path.AddRectangle(r); return path; }
+				float d = radius * 2;
+				path.AddArc(r.Left, r.Top, d, d, 180, 90);
+				path.AddArc(r.Right - d, r.Top, d, d, 270, 90);
+				path.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+				path.AddArc(r.Left, r.Bottom - d, d, d, 90, 90);
+				path.CloseFigure();
+				return path;
+			}
+
+			// Tests can't always switch visual styles on (only before a process's first window); the theme
+			// pictures themselves don't need them.
+			internal static bool ThemedForTests;
+
 			private static IntPtr Theme(int dpi)
 			{
-				if (noDpiThemes || !Application.RenderWithVisualStyles) return IntPtr.Zero;
+				if (noDpiThemes || !(Application.RenderWithVisualStyles || ThemedForTests)) return IntPtr.Zero;
 				lock (themes)
 				{
 					if (themes.TryGetValue(dpi, out var theme)) return theme;

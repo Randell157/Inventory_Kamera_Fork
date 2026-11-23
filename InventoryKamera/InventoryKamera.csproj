@@ -105,7 +105,9 @@
     <Compile Include="ui\LookContext.cs" />
     <Compile Include="ui\Looks.cs" />
     <Compile Include="ui\ScanSession.cs" />
+    <Compile Include="ui\HelpMenu.cs" />
     <Compile Include="ui\Zoom.cs" />
+    <Compile Include="ui\ZoomMenuRenderer.cs" />
     <Compile Include="ui\GameDataLine.cs">
       <SubType>Component</SubType>
     </Compile>

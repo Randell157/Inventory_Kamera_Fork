@@ -93,7 +93,7 @@ namespace InventoryKamera
 			options.DropDownItems.Add("Open Export Folder", null, (s, e) => ScanWindows.OpenFolder(OutputPath.Text));
 			options.DropDownItems.Add("Update Executables", null, (s, e) => new ui.ExecutablesForm().Show());
 			options.DropDownOpening += (s, e) => update.Enabled = !ScanSession.IsRunning;
-			menu.Items.AddRange(new ToolStripItem[] { file, LookMenu.Build(Look.Advanced, this), options });
+			menu.Items.AddRange(new ToolStripItem[] { file, LookMenu.Build(Look.Advanced, this), options, HelpMenu.Build() });
 			UpdateMark.Attach(this, menu, update);
 			MainMenuStrip = menu;
 			Controls.Add(menu);

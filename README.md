@@ -76,6 +76,8 @@ Inventory Kamera has three looks; switch between them from the `View` menu (your
 
 `View` → `Zoom` makes any look bigger (100% to 300%); sizes that don't fit your screen are greyed out.
 
+In Simple and Advanced, the `Help` menu opens this fork's pages in your browser: `GitHub page`, `Latest releases` and `Report a problem (Issue page)`. Classic has the same links on its window (`Github Mainpage`, `Latest Releases`, `Issue Page`).
+
 Next to the Scan button, every look shows which Genshin version its game data is for ("Game data: Genshin 7.2"). When the daily update check finds newer game data, a "7.3 available" link opens the Updates window; if the game data is missing, "Get it" downloads it. While the status line needs the room (during a scan, for example), the line steps aside.
 
 Before starting the scanner, you can (optionally) edit the following options:
@@ -225,7 +227,7 @@ Consider using [a JSON text validator](https://jsonlint.com/) after following th
 
 ### Creating a new issue
 
-Open issues for this fork at [github.com/Randell157/Inventory_Kamera_Fork/issues](https://github.com/Randell157/Inventory_Kamera_Fork/issues). We would **love to have Screenshots (especially video recordings!) and Error Logs as evidence**. These can be very helpful for debugging your problem. Add it to the issue via drag-and-drop or by attaching the file to the template. Inventory Kamera may place screenshots in the `logging` folder (divided into categories) when it thinks it encountered an issue. Attaching a zipped copy of your `logging` folder is the best way to submit logs. You may tick `Log all screenshots` (in Advanced and Classic) to save screenshots in most areas, which helps when reporting a problem.
+Open issues for this fork at [github.com/Randell157/Inventory_Kamera_Fork/issues](https://github.com/Randell157/Inventory_Kamera_Fork/issues) (in the app: `Help` → `Report a problem` in Simple and Advanced, `Issue Page` in Classic). We would **love to have Screenshots (especially video recordings!) and Error Logs as evidence**. These can be very helpful for debugging your problem. Add it to the issue via drag-and-drop or by attaching the file to the template. Inventory Kamera may place screenshots in the `logging` folder (divided into categories) when it thinks it encountered an issue. Attaching a zipped copy of your `logging` folder is the best way to submit logs. You may tick `Log all screenshots` (in Advanced and Classic) to save screenshots in most areas, which helps when reporting a problem.
 
 ## Frequently Asked Questions (FAQ)
 
